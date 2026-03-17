@@ -315,7 +315,7 @@ class ProductScraper {
         // Încearcă să folosească backend-ul local Puppeteer
         try {
             console.log('🚀 Încercăm backend-ul Puppeteer...');
-            const response = await fetch(`${this.apiBaseUrl}/search?q=${encodeURIComponent(searchQuery)}`);
+            const response = await fetch(`${this.apiBaseUrl}/search?q=${encodeURIComponent(searchQuery)}&ai=1`);
             
             console.log(`📡 Response status: ${response.status}`);
             

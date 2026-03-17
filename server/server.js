@@ -5,6 +5,7 @@ const NodeCache = require('node-cache');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Cache pentru 5 minute
 const cache = new NodeCache({ stdTTL: 300 });
@@ -27,6 +28,95 @@ function isAllowedImageHost(hostname) {
     const normalized = hostname.toLowerCase();
     if (allowedImageHosts.has(normalized)) return true;
     return Array.from(allowedImageHosts).some((host) => normalized.endsWith(`.${host}`));
+}
+
+function extractFirstJsonObject(text) {
+    if (!text) return null;
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) return null;
+    return text.slice(start, end + 1);
+}
+
+async function aiRerankProducts(query, products) {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey || !Array.isArray(products) || products.length === 0) {
+        return products;
+    }
+
+    const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.1-8b-instruct:free';
+    const candidates = products.slice(0, Math.min(products.length, 60)).map((p, i) => ({
+        id: p.id,
+        title: p.title,
+        store: p.store,
+        price: p.price,
+        inStock: p.inStock,
+        idx: i
+    }));
+
+    const systemPrompt = 'You are a product relevance ranker. Return only valid JSON.';
+    const userPrompt = JSON.stringify({
+        query,
+        instruction: 'Return {"ranked":[{"id":"...","score":0-100}]}. Include only ids from candidates.',
+        candidates
+    });
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+        const response = await fetch(OPENROUTER_API_URL, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`,
+                'HTTP-Referer': process.env.OPENROUTER_SITE_URL || 'http://localhost:3000',
+                'X-Title': process.env.OPENROUTER_APP_NAME || 'PricePulse'
+            },
+            body: JSON.stringify({
+                model,
+                temperature: 0.1,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ]
+            })
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.warn('OpenRouter rerank skipped:', response.status, errText.slice(0, 250));
+            return products;
+        }
+
+        const payload = await response.json();
+        const content = payload?.choices?.[0]?.message?.content || '';
+        const jsonText = extractFirstJsonObject(content);
+        if (!jsonText) return products;
+
+        const parsed = JSON.parse(jsonText);
+        const ranked = Array.isArray(parsed?.ranked) ? parsed.ranked : [];
+        if (ranked.length === 0) return products;
+
+        const scoreMap = new Map();
+        ranked.forEach((item, idx) => {
+            if (!item?.id) return;
+            const rawScore = Number(item.score);
+            scoreMap.set(item.id, Number.isFinite(rawScore) ? rawScore : (100 - idx));
+        });
+
+        return [...products].sort((a, b) => {
+            const aScore = scoreMap.has(a.id) ? scoreMap.get(a.id) : -1;
+            const bScore = scoreMap.has(b.id) ? scoreMap.get(b.id) : -1;
+            return bScore - aScore;
+        });
+    } catch (error) {
+        console.warn('OpenRouter rerank error, default order used:', error.message);
+        return products;
+    }
 }
 
 // Funcție helper pentru delay între request-uri
@@ -282,6 +372,7 @@ async function scrapeStore(browser, storeName, query, config) {
 // Endpoint principal de căutare
 app.get('/search', async (req, res) => {
     const query = req.query.q;
+    const useAiRerank = String(req.query.ai || '').trim() === '1';
     
     if (!query) {
         return res.status(400).json({ error: 'Query parameter "q" is required' });
@@ -290,7 +381,7 @@ app.get('/search', async (req, res) => {
     console.log(`\n🔎 Căutare nouă: "${query}"`);
     
     // Verifică cache
-    const cacheKey = `search_${query.toLowerCase()}`;
+    const cacheKey = `search_${query.toLowerCase()}_ai_${useAiRerank ? '1' : '0'}`;
     const cached = cache.get(cacheKey);
     if (cached) {
         console.log('📦 Returnat din cache');
@@ -326,14 +417,20 @@ app.get('/search', async (req, res) => {
         
         // Combină toate rezultatele
         const allProducts = results.flat();
+        const finalProducts = useAiRerank
+            ? await aiRerankProducts(query, allProducts)
+            : allProducts;
         
-        console.log(`\n✨ Total: ${allProducts.length} produse găsite`);
+        console.log(`\n✨ Total: ${finalProducts.length} produse găsite`);
+        if (useAiRerank) {
+            console.log('🤖 AI rerank:', process.env.OPENROUTER_API_KEY ? 'enabled' : 'skipped (missing OPENROUTER_API_KEY)');
+        }
         
         // Salvează în cache
-        cache.set(cacheKey, allProducts);
+        cache.set(cacheKey, finalProducts);
         
         await browser.close();
-        res.json(allProducts);
+        res.json(finalProducts);
         
     } catch (error) {
         console.error('❌ Server error:', error);
@@ -406,7 +503,7 @@ app.get('/', (req, res) => {
     res.json({
         status: 'ok',
         service: 'PricePulse API',
-        endpoints: ['/health', '/search?q=iphone']
+        endpoints: ['/health', '/search?q=iphone', '/search?q=iphone&ai=1']
     });
 });
 
