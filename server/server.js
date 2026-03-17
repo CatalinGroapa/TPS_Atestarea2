@@ -4,7 +4,7 @@ const cors = require('cors');
 const NodeCache = require('node-cache');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Cache pentru 5 minute
 const cache = new NodeCache({ stdTTL: 300 });
@@ -402,6 +402,14 @@ app.get('/image-proxy', async (req, res) => {
 });
 
 // Health check endpoint
+app.get('/', (req, res) => {
+    res.json({
+        status: 'ok',
+        service: 'PricePulse API',
+        endpoints: ['/health', '/search?q=iphone']
+    });
+});
+
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'SmartShop Scraper Server is running!' });
 });

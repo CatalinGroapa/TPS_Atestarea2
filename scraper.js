@@ -1,6 +1,8 @@
 // Web Scraper pentru magazinele din Moldova
 class ProductScraper {
     constructor() {
+        this.remoteApiBaseUrl = 'https://pricepulse-api.onrender.com';
+        this.apiBaseUrl = this.resolveApiBaseUrl();
         this.stores = {
             darwin: {
                 name: 'Darwin',
@@ -48,6 +50,23 @@ class ProductScraper {
                 }
             }
         };
+    }
+
+    resolveApiBaseUrl() {
+        // Allow manual override from HTML before loading scraper.js:
+        // window.PRICEPULSE_API_URL = 'https://...'
+        if (typeof window !== 'undefined' && window.PRICEPULSE_API_URL) {
+            return String(window.PRICEPULSE_API_URL).replace(/\/+$/, '');
+        }
+
+        if (typeof window !== 'undefined') {
+            const host = window.location.hostname;
+            if (host === 'localhost' || host === '127.0.0.1') {
+                return 'http://localhost:3000';
+            }
+        }
+
+        return this.remoteApiBaseUrl;
     }
 
     // Metodă pentru a face request cross-origin (în producție se va folosi un backend)
@@ -291,11 +310,12 @@ class ProductScraper {
     // Funcție principală care scrapuiește toate magazinele
     async scrapeAllStores(searchQuery) {
         console.log(`Searching for: "${searchQuery}" in all stores...`);
+        console.log(`API backend: ${this.apiBaseUrl}`);
         
         // Încearcă să folosească backend-ul local Puppeteer
         try {
             console.log('🚀 Încercăm backend-ul Puppeteer...');
-            const response = await fetch(`http://localhost:3000/search?q=${encodeURIComponent(searchQuery)}`);
+            const response = await fetch(`${this.apiBaseUrl}/search?q=${encodeURIComponent(searchQuery)}`);
             
             console.log(`📡 Response status: ${response.status}`);
             
