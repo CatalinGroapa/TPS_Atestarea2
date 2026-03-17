@@ -500,18 +500,18 @@ app.get('/image-proxy', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({
         status: 'ok',
-        service: 'PricePulse API',
+        service: 'PulsePrice API',
         endpoints: ['/health', '/search?q=iphone', '/search?q=iphone&ai=1']
     });
 });
 
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', message: 'SmartShop Scraper Server is running!' });
+    res.json({ status: 'ok', message: 'PulsePrice Scraper Server is running!' });
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`\n🚀 SmartShop Scraper Server pornit pe http://localhost:${PORT}`);
+    console.log(`\n🚀 PulsePrice Scraper Server pornit pe http://localhost:${PORT}`);
     console.log(`📝 Test: http://localhost:${PORT}/search?q=iPhone`);
     console.log(`💚 Health: http://localhost:${PORT}/health\n`);
 });

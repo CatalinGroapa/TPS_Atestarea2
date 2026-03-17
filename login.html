@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulsePrice - Login</title>
+    <link rel="stylesheet" href="login.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <main class="auth-page">
+        <section class="auth-card">
+            <img class="auth-logo" src="assets/images/PulsePriceLogo.png" alt="PulsePrice logo">
+            <p class="auth-subtitle">Conecteaza-te pentru a accesa compararea inteligenta de preturi.</p>
+
+            <div class="auth-tabs">
+                <button id="showLogin" class="auth-tab active" type="button">Logare</button>
+                <button id="showRegister" class="auth-tab" type="button">Inregistrare</button>
+            </div>
+
+            <form id="loginForm" class="auth-form">
+                <label class="field-label" for="loginEmail">Email</label>
+                <input id="loginEmail" class="field-input" type="email" required placeholder="exemplu@email.com">
+
+                <label class="field-label" for="loginPassword">Parola</label>
+                <input id="loginPassword" class="field-input" type="password" required placeholder="Parola">
+
+                <button class="submit-btn" type="submit">Intra in cont</button>
+            </form>
+
+            <form id="registerForm" class="auth-form hidden">
+                <label class="field-label" for="registerName">Nume</label>
+                <input id="registerName" class="field-input" type="text" required placeholder="Nume complet">
+
+                <label class="field-label" for="registerEmail">Email</label>
+                <input id="registerEmail" class="field-input" type="email" required placeholder="exemplu@email.com">
+
+                <label class="field-label" for="registerPassword">Parola</label>
+                <input id="registerPassword" class="field-input" type="password" required placeholder="Minim 6 caractere">
+
+                <label class="field-label" for="registerPasswordConfirm">Confirma parola</label>
+                <input id="registerPasswordConfirm" class="field-input" type="password" required placeholder="Repeta parola">
+
+                <button class="submit-btn" type="submit">Creeaza cont</button>
+            </form>
+
+            <div class="social-login">
+                <p class="social-title">Sau logheaza-te cu una din:</p>
+                <div class="social-options">
+                    <button id="googleLoginBtn" class="social-option" type="button" title="Google">
+                        <img src="assets/images/Google__G__logo.svg.png" alt="Google">
+                        <span>Google</span>
+                    </button>
+                </div>
+            </div>
+
+            <p id="authMessage" class="auth-message" aria-live="polite"></p>
+        </section>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>

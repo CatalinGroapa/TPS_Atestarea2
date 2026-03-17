@@ -147,7 +147,7 @@ class SmartShopApp {
             <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            <h3>Bine ai venit la SmartShop AI! 🇲🇩</h3>
+            <h3>Bine ai venit la PulsePrice! 🇲🇩</h3>
             <p>Căutăm produsele în <strong>Darwin, Cactus, Bomba și PandaShop</strong></p>
             <p style="margin-top: 0.5rem; color: var(--text-muted);">
                 Prețuri în <strong>Lei MDL</strong> • Analiză AI • Comparare automată
@@ -703,9 +703,45 @@ class SmartShopApp {
 }
 
 // Inițializare aplicație
+function initAuthUi(user) {
+    const userEl = document.getElementById('currentUserName');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    if (userEl) {
+        const name = user?.displayName || user?.email || 'Utilizator';
+        userEl.textContent = `Cont: ${name}`;
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            firebase.auth().signOut().finally(() => {
+                window.location.href = 'login.html';
+            });
+        });
+    }
+}
+
 let app;
 document.addEventListener('DOMContentLoaded', () => {
-    app = new SmartShopApp();
-    console.log('🇲🇩 SmartShop AI Moldova initialized!');
-    console.log('Searching in: Darwin, Cactus, Bomba, PandaShop');
+    if (!window.firebase || !firebase.auth) {
+        alert('Firebase nu este initializat. Verifica firebase-config.js');
+        window.location.href = 'login.html';
+        return;
+    }
+
+    let initialized = false;
+    firebase.auth().onAuthStateChanged((user) => {
+        if (!user) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        initAuthUi(user);
+        if (!initialized) {
+            initialized = true;
+            app = new SmartShopApp();
+            console.log('🇲🇩 PulsePrice Moldova initialized!');
+            console.log('Searching in: Darwin, Cactus, Bomba, PandaShop');
+        }
+    });
 });
