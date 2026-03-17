@@ -254,7 +254,8 @@ async function scrapeStore(browser, storeName, query, config) {
                         storeUrl: storeUrl,
                         description: title,
                         rating: 4 + Math.random(), // Random rating între 4-5
-                        reviews: Math.floor(Math.random() * 100) + 10,
+                        reviewCount: Math.floor(Math.random() * 100) + 10,
+                        reviews: [],
                         availability: inStock ? 'În stoc' : 'Indisponibil',
                         inStock: inStock  // Pentru filtrul frontend
                     });

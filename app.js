@@ -6,6 +6,7 @@ class SmartShopApp {
         this.scraper = new ProductScraper();
         this.products = [];
         this.currentResults = [];
+        this.scoredResults = [];
         this.currency = 'MDL'; // Lei moldovenești
         this.searchHistory = this.loadSearchHistory();
         this.wishlist = this.loadWishlist();
@@ -122,7 +123,9 @@ class SmartShopApp {
                 price: product.price,
                 image: product.image,
                 store: product.store,
-                link: product.link,
+                link: product.productUrl || product.storeUrl || '',
+                productUrl: product.productUrl || product.storeUrl || '',
+                storeUrl: product.storeUrl || '',
                 addedAt: new Date().toISOString()
             });
         }
@@ -185,15 +188,17 @@ class SmartShopApp {
         try {
             // Scrape toate magazinele
             const products = await this.scraper.scrapeAllStores(query);
+            const normalizedProducts = products.map((product, index) => this.normalizeProduct(product, index));
             
-            if (products.length === 0) {
+            if (normalizedProducts.length === 0) {
                 this.hideLoading();
                 this.showNoResults(query);
                 return;
             }
 
-            this.products = products;
-            this.currentResults = products;
+            this.products = normalizedProducts;
+            this.currentResults = normalizedProducts;
+            this.scoredResults = [];
             
             // Așteaptă un pic pentru efectul de procesare AI
             await new Promise(resolve => setTimeout(resolve, 800));
@@ -221,7 +226,33 @@ class SmartShopApp {
             filters
         );
 
+        this.scoredResults = recommendations;
         this.displayResults(recommendations);
+    }
+
+    normalizeProduct(product, index = 0) {
+        const safePrice = Number(product?.price);
+        const safeRating = Number(product?.rating);
+        const safeReviewCount = Number(product?.reviewCount ?? product?.reviews ?? 0);
+        const sourceStore = String(product?.store || 'Magazin');
+        const cleanStore = sourceStore.replace(/\.md$/i, '');
+
+        return {
+            ...product,
+            id: product?.id || `${cleanStore}_${Date.now()}_${index}`,
+            title: product?.title || 'Produs fără titlu',
+            description: product?.description || product?.title || '',
+            price: Number.isFinite(safePrice) ? safePrice : 0,
+            rating: Number.isFinite(safeRating) ? safeRating : 0,
+            reviewCount: Number.isFinite(safeReviewCount) ? safeReviewCount : 0,
+            store: cleanStore,
+            storeUrl: product?.storeUrl || '',
+            productUrl: product?.productUrl || product?.link || product?.storeUrl || '',
+            image: product?.image || 'https://via.placeholder.com/400x300/1e293b/6366f1?text=Produs',
+            inStock: Boolean(product?.inStock),
+            reviews: Array.isArray(product?.reviews) ? product.reviews : [],
+            specs: Array.isArray(product?.specs) ? product.specs : []
+        };
     }
 
     displayResults(products) {
@@ -279,7 +310,7 @@ class SmartShopApp {
                 <h3 class="product-title">${product.title}</h3>
                 <div class="product-rating">
                     <span class="stars">${this.generateStars(product.rating)}</span>
-                    <span class="rating-text">${product.rating.toFixed(1)} (${product.reviewCount} recenzii)</span>
+                    <span class="rating-text">${Number(product.rating || 0).toFixed(1)} (${product.reviewCount || 0} recenzii)</span>
                 </div>
                 <div class="product-features">
                     ${reasons.slice(0, 2).map(reason => 
@@ -307,7 +338,7 @@ class SmartShopApp {
             // Card click opens original product page (unless user clicked the details button)
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.product-btn')) return; // allow button to handle details
-                const url = product.productUrl || product.storeUrl || product.storeUrl;
+                const url = product.productUrl || product.storeUrl;
                 if (url) window.open(url, '_blank');
             });
 
@@ -334,11 +365,12 @@ class SmartShopApp {
     }
 
     formatPrice(price) {
-        return `${price.toLocaleString('ro-MD')} ${this.currency}`;
+        const safePrice = Number(price);
+        return `${(Number.isFinite(safePrice) ? safePrice : 0).toLocaleString('ro-MD')} ${this.currency}`;
     }
 
     showProductDetails(productId) {
-        const product = [...this.currentResults, ...this.products].find(p => p.id === productId);
+        const product = [...this.scoredResults, ...this.currentResults, ...this.products].find(p => p.id === productId);
         if (!product) return;
 
         const similar = this.recommendationEngine.findSimilarProducts(
@@ -352,6 +384,14 @@ class SmartShopApp {
             'Cactus': '🌵',
             'Bomba': '💣',
             'PandaShop': '🐼'
+        };
+
+        const scoreBreakdown = product.scoreBreakdown || {
+            price: 0,
+            rating: 0,
+            reviews: 0,
+            availability: product.inStock ? 100 : 0,
+            relevance: 0
         };
 
         this.modalBody.innerHTML = `
@@ -392,7 +432,7 @@ class SmartShopApp {
                     </div>
                     <span style="color: var(--text-muted);">•</span>
                     <span style="color: var(--text-secondary);">
-                        ${product.reviewCount} recenzii
+                        ${product.reviewCount || 0} recenzii
                     </span>
                     <span style="margin-left: auto; background: ${product.inStock ? 'var(--success-color)' : 'var(--danger-color)'}; 
                                  padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.9rem; font-weight: 600;">
@@ -425,7 +465,7 @@ class SmartShopApp {
                         <span>🤖</span> Analiza AI
                     </h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem;">
-                        ${Object.entries(product.scoreBreakdown).filter(([key]) => key !== 'sentiment').map(([key, value]) => `
+                        ${Object.entries(scoreBreakdown).filter(([key]) => key !== 'sentiment').map(([key, value]) => `
                             <div style="text-align: center; background: var(--surface); padding: 1rem; border-radius: 0.75rem;">
                                 <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">
                                     ${this.translateScoreKey(key)}
@@ -621,7 +661,7 @@ class SmartShopApp {
                                 <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color);">${this.formatPrice(item.price)}</div>
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                <button onclick="window.open('${item.link}', '_blank')" 
+                                <button onclick="window.open('${item.productUrl || item.link || item.storeUrl || '#'}', '_blank')" 
                                         style="background: var(--primary-color); color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; white-space: nowrap;">
                                     Vezi Produs
                                 </button>
