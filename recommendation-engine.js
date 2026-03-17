@@ -299,7 +299,7 @@ class RecommendationEngine {
             return this.passesBasicFilters(product, filters);
         });
 
-        const filteredProducts = strictFilteredProducts.length > 0
+        let filteredProducts = strictFilteredProducts.length > 0
             ? strictFilteredProducts
             : products.filter(product => {
                 if (!this.matchesQueryCategory(product.title, searchQuery)) {
@@ -316,6 +316,23 @@ class RecommendationEngine {
 
                 return this.passesBasicFilters(product, filters);
             });
+
+        // Last-resort fallback:
+        // if strict+relaxed filtering found nothing, still return model-matching
+        // products (often accessories) instead of empty state.
+        if (filteredProducts.length === 0) {
+            const modelCodes = this.extractModelCodes(searchQuery);
+            if (modelCodes.length > 0) {
+                filteredProducts = products.filter(product => {
+                    if (!this.passesBasicFilters(product, filters)) {
+                        return false;
+                    }
+
+                    const title = String(product.title || '');
+                    return modelCodes.some(code => this.titleContainsModelCode(title, code));
+                });
+            }
+        }
 
         if (filteredProducts.length === 0) {
             return [];
