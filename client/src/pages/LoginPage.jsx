@@ -79,7 +79,7 @@ export default function LoginPage() {
       <section className="auth-card">
         <img
           className="auth-logo"
-          src="/images/logo.svg"
+          src="/assets/images/logo.svg"
           alt="Pulse-Radar"
         />
         <p className="auth-subtitle">
@@ -185,7 +185,7 @@ export default function LoginPage() {
               title="Google"
               onClick={handleGoogle}
             >
-              <img src="/images/Google__G__logo.svg.png" alt="Google" />
+              <img src="/assets/images/Google__G__logo.svg.png" alt="Google" />
               <span>Google</span>
             </button>
           </div>

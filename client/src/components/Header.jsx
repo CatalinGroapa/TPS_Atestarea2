@@ -8,7 +8,7 @@ export default function Header({ user, wishlistCount, onWishlistClick, onLogout 
       <div className="site-header__inner">
         <a className="site-logo" href="#">
           <img
-            src="/images/logo.svg"
+            src="/assets/images/logo.svg"
             alt="PulsePrice"
             className="site-logo__img"
           />
