@@ -1,5 +1,5 @@
 // Recommendation engine with stronger relevance filtering.
-class RecommendationEngine {
+export class RecommendationEngine {
     constructor(nlpEngine) {
         this.nlpEngine = nlpEngine;
         this.weights = {

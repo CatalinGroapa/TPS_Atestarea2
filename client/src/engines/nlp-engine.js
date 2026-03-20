@@ -1,5 +1,5 @@
 // NLP Engine pentru analiza și procesarea textului
-class NLPEngine {
+export class NLPEngine {
     constructor() {
         this.stopWords = new Set([
             'si', 'și', 'de', 'la', 'in', 'în', 'cu', 'pe', 'pentru', 'cel', 'cea', 'mai',

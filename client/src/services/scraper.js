@@ -1,5 +1,5 @@
 // Web Scraper pentru magazinele din Moldova
-class ProductScraper {
+export class ProductScraper {
     constructor() {
         this.remoteApiBaseUrl = 'https://pricepulse-api.onrender.com';
         this.apiBaseUrl = this.resolveApiBaseUrl();
