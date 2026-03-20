@@ -1,137 +1,194 @@
 :root {
-    --primary-color: #2563eb;
-    --primary-light: #3b82f6;
-    --surface: #141824;
-    --surface-light: #242938;
-    --background: #0a0e1a;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --danger-color: #ef4444;
-    --success-color: #10b981;
-    --border-color: #1e293b;
+    --primary-color: #0a0a0a;
+    --primary-light: #262626;
+    --surface: #fafafa;
+    --surface-light: #f0f0f0;
+    --background: #ffffff;
+    --text-primary: #0a0a0a;
+    --text-secondary: #525252;
+    --danger-color: #dc2626;
+    --success-color: #16a34a;
+    --border-color: #e5e5e5;
+    --border-hover: #d4d4d4;
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
 }
 
 * {
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-    margin: 0;
     min-height: 100vh;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: radial-gradient(circle at top right, #1f2a44 0%, var(--background) 45%);
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    background: var(--background);
     color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
 }
 
+/* ── Page layout ── */
 .auth-page {
     min-height: 100vh;
     display: grid;
     place-items: center;
-    padding: 1.2rem;
-}
-
-.auth-card {
-    width: min(520px, 100%);
-    background: rgba(20, 24, 36, 0.92);
-    border: 1px solid var(--border-color);
-    border-radius: 1rem;
     padding: 1.5rem;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    background: var(--surface);
 }
 
+/* ── Card ── */
+.auth-card {
+    width: min(420px, 100%);
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 2rem 2rem 1.75rem;
+    box-shadow: var(--shadow);
+}
+
+/* ── Logo ── */
 .auth-logo {
-    width: min(340px, 86vw);
-    height: 110px;
-    object-fit: cover;
+    width: min(220px, 70vw);
+    height: 120px;
+    object-fit: contain;
     object-position: center;
     display: block;
-    margin: 0 auto 0.4rem;
+    margin: 0 auto 0.5rem;
+    filter: grayscale(100%);
 }
 
+/* ── Subtitle ── */
 .auth-subtitle {
-    margin: 0.2rem 0 1rem;
+    margin: 0 0 1.5rem;
     text-align: center;
     color: var(--text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
 }
 
+/* ── Tabs ── */
 .auth-tabs {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
 }
 
 .auth-tab {
-    border: 1px solid var(--border-color);
+    border: none;
     background: var(--surface-light);
     color: var(--text-secondary);
-    border-radius: 0.65rem;
-    padding: 0.65rem;
+    padding: 0.625rem;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition:
+        background 0.15s,
+        color 0.15s;
+}
+
+.auth-tab + .auth-tab {
+    border-left: 1px solid var(--border-color);
 }
 
 .auth-tab.active {
     background: var(--primary-color);
     color: #fff;
-    border-color: var(--primary-color);
 }
 
+.auth-tab:not(.active):hover {
+    background: #e8e8e8;
+    color: var(--text-primary);
+}
+
+/* ── Form ── */
 .auth-form {
     display: grid;
-    gap: 0.55rem;
+    gap: 0.5rem;
 }
 
 .field-label {
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    margin-top: 0.2rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    margin-top: 0.375rem;
 }
 
 .field-input {
     width: 100%;
-    background: var(--surface-light);
+    background: var(--background);
     border: 1px solid var(--border-color);
-    border-radius: 0.65rem;
+    border-radius: var(--radius-md);
     color: var(--text-primary);
-    padding: 0.78rem 0.85rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.9rem;
     outline: none;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+}
+
+.field-input::placeholder {
+    color: #c0c0c0;
 }
 
 .field-input:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+    box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
 }
 
+/* ── Submit button ── */
 .submit-btn {
-    margin-top: 0.55rem;
+    margin-top: 0.75rem;
     border: none;
-    border-radius: 0.7rem;
+    border-radius: var(--radius-md);
     background: var(--primary-color);
     color: #fff;
-    font-weight: 700;
-    padding: 0.85rem 1rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    padding: 0.75rem 1rem;
     cursor: pointer;
+    transition:
+        background 0.15s,
+        transform 0.1s;
+    width: 100%;
 }
 
 .submit-btn:hover {
     background: var(--primary-light);
 }
+.submit-btn:active {
+    transform: translateY(1px);
+}
 
+/* ── Social login ── */
 .social-login {
-    margin-top: 1rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-color);
 }
 
 .social-title {
-    margin: 0 0 0.6rem;
+    margin: 0 0 0.75rem;
     color: var(--text-secondary);
-    font-size: 0.92rem;
+    font-size: 0.8125rem;
+    text-align: center;
 }
 
 .social-options {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
+    gap: 0.5rem;
 }
 
 .social-option {
@@ -139,41 +196,49 @@ body {
     align-items: center;
     gap: 0.5rem;
     border: 1px solid var(--border-color);
-    border-radius: 0.65rem;
-    background: var(--surface-light);
+    border-radius: var(--radius-md);
+    background: var(--background);
     color: var(--text-primary);
-    font-weight: 600;
-    padding: 0.55rem 0.85rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.875rem;
     cursor: pointer;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+    flex: 1;
+    justify-content: center;
 }
 
 .social-option:hover {
-    border-color: #334155;
-    background: #2a3143;
+    background: var(--surface-light);
+    border-color: var(--border-hover);
 }
 
 .social-option img {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     object-fit: contain;
+    filter: grayscale(100%);
 }
 
+/* ── Auth message ── */
 .auth-message {
     min-height: 1.25rem;
-    margin: 0.75rem 0 0;
+    margin: 0.875rem 0 0;
     text-align: center;
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: 0.8125rem;
 }
 
 .auth-message.error {
     color: var(--danger-color);
 }
-
 .auth-message.success {
     color: var(--success-color);
 }
 
+/* ── Utility ── */
 .hidden {
     display: none;
 }
