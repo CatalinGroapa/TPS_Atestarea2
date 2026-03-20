@@ -5,7 +5,6 @@ const NodeCache = require('node-cache');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 // Cache pentru 5 minute
 const cache = new NodeCache({ stdTTL: 300 });
@@ -38,83 +37,89 @@ function extractFirstJsonObject(text) {
     return text.slice(start, end + 1);
 }
 
-async function aiRerankProducts(query, products) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey || !Array.isArray(products) || products.length === 0) {
-        return products;
-    }
+async function aiFilterProducts(query, products) {
+    if (!Array.isArray(products) || products.length === 0) return products;
 
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-    const candidates = products.slice(0, Math.min(products.length, 60)).map((p, i) => ({
-        id: p.id,
-        title: p.title,
-        store: p.store,
-        price: p.price,
-        inStock: p.inStock,
-        idx: i
-    }));
+    const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+    const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:3b';
 
-    const systemPrompt = 'You are a product relevance ranker. Return only valid JSON.';
-    const userPrompt = JSON.stringify({
-        query,
-        instruction: 'Return {"ranked":[{"id":"...","score":0-100}]}. Include only ids from candidates.',
-        candidates
-    });
+    // Trimitem în batch-uri de 40 ca să nu depășim contextul modelului
+    const BATCH_SIZE = 40;
+    const relevantIds = new Set();
 
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
+    for (let i = 0; i < products.length; i += BATCH_SIZE) {
+        const batch = products.slice(i, i + BATCH_SIZE);
+        const candidates = batch.map((p) => ({ id: p.id, title: p.title }));
 
-        const response = await fetch(OPENAI_API_URL, {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model,
-                temperature: 0.1,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ]
-            })
-        });
+        const systemPrompt =
+            'You are a strict product filter assistant. ' +
+            'You receive a user search query and a list of product titles. ' +
+            'Your task: return ONLY the IDs of products that ARE the exact searched item. ' +
+            'EXCLUDE everything that is an accessory, case, cover, charger, cable, screen protector, earphone, holder, stand, adapter, battery, or any peripheral for the product. ' +
+            'Return ONLY valid JSON, no explanation, no markdown.';
 
-        clearTimeout(timeoutId);
+        const userPrompt =
+            `User searched for: "${query}"\n\n` +
+            `Products:\n${JSON.stringify(candidates)}\n\n` +
+            `Return only IDs of products that ARE the actual "${query}" device/product itself, NOT accessories.\n` +
+            `JSON format: {"relevant": ["id1", "id2"]}`;
 
-        if (!response.ok) {
-            const errText = await response.text();
-            console.warn('OpenAI rerank skipped:', response.status, errText.slice(0, 250));
-            return products;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+            const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+                method: 'POST',
+                signal: controller.signal,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: OLLAMA_MODEL,
+                    stream: false,
+                    options: { temperature: 0.0 },
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ]
+                })
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                console.warn(`⚠️  Ollama batch ${i}-${i + BATCH_SIZE} skipped: HTTP ${response.status}`);
+                // Dacă Ollama nu e disponibil, returnăm produsele nemodificate
+                batch.forEach((p) => relevantIds.add(p.id));
+                continue;
+            }
+
+            const payload = await response.json();
+            const content = payload?.message?.content || '';
+            console.log(`🤖 Ollama răspuns batch ${Math.floor(i / BATCH_SIZE) + 1}:`, content.slice(0, 300));
+
+            const jsonText = extractFirstJsonObject(content);
+            if (!jsonText) {
+                console.warn('⚠️  Ollama nu a returnat JSON valid, păstrăm batch-ul nefiltrat');
+                batch.forEach((p) => relevantIds.add(p.id));
+                continue;
+            }
+
+            const parsed = JSON.parse(jsonText);
+            const batchRelevant = Array.isArray(parsed?.relevant) ? parsed.relevant : [];
+
+            if (batchRelevant.length === 0) {
+                console.log(`ℹ️  Ollama: niciun produs relevant în batch-ul ${Math.floor(i / BATCH_SIZE) + 1}`);
+            } else {
+                batchRelevant.forEach((id) => relevantIds.add(id));
+            }
+        } catch (error) {
+            console.warn(`⚠️  Ollama batch ${i} error: ${error.message} — batch păstrat nefiltrat`);
+            batch.forEach((p) => relevantIds.add(p.id));
         }
-
-        const payload = await response.json();
-        const content = payload?.choices?.[0]?.message?.content || '';
-        const jsonText = extractFirstJsonObject(content);
-        if (!jsonText) return products;
-
-        const parsed = JSON.parse(jsonText);
-        const ranked = Array.isArray(parsed?.ranked) ? parsed.ranked : [];
-        if (ranked.length === 0) return products;
-
-        const scoreMap = new Map();
-        ranked.forEach((item, idx) => {
-            if (!item?.id) return;
-            const rawScore = Number(item.score);
-            scoreMap.set(item.id, Number.isFinite(rawScore) ? rawScore : (100 - idx));
-        });
-
-        return [...products].sort((a, b) => {
-            const aScore = scoreMap.has(a.id) ? scoreMap.get(a.id) : -1;
-            const bScore = scoreMap.has(b.id) ? scoreMap.get(b.id) : -1;
-            return bScore - aScore;
-        });
-    } catch (error) {
-        console.warn('OpenAI rerank error, default order used:', error.message);
-        return products;
     }
+
+    const filtered = products.filter((p) => relevantIds.has(p.id));
+    console.log(`🤖 Ollama filtru: ${products.length} → ${filtered.length} produse relevante`);
+    return filtered.length > 0 ? filtered : products;
 }
 
 // Funcție helper pentru delay între request-uri
@@ -390,8 +395,18 @@ app.get('/search', async (req, res) => {
     try {
         // Lansează browser Puppeteer
         console.log('🌐 Lansez Puppeteer browser...');
+        const fs = require('fs');
+        const possibleChromePaths = [
+            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+            '/usr/bin/google-chrome',
+            '/usr/bin/chromium-browser',
+            '/usr/bin/chromium',
+        ];
+        const systemChrome = possibleChromePaths.find(p => fs.existsSync(p));
+
         browser = await puppeteer.launch({
             headless: 'new',
+            executablePath: systemChrome || undefined,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -415,14 +430,19 @@ app.get('/search', async (req, res) => {
         
         // Combină toate rezultatele
         const allProducts = results.flat();
-        const finalProducts = useAiRerank
-            ? await aiRerankProducts(query, allProducts)
-            : allProducts;
-        
-        console.log(`\n✨ Total: ${finalProducts.length} produse găsite`);
+        console.log(`\n📦 Total produse scraped: ${allProducts.length}`);
+
+        let finalProducts;
         if (useAiRerank) {
-            console.log('🤖 AI rerank:', process.env.OPENAI_API_KEY ? 'enabled' : 'skipped (missing OPENAI_API_KEY)');
+            const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+            const ollamaModel = process.env.OLLAMA_MODEL || 'llama3.2:3b';
+            console.log(`🤖 Filtru AI Ollama activ (${ollamaModel} @ ${ollamaUrl})...`);
+            finalProducts = await aiFilterProducts(query, allProducts);
+        } else {
+            finalProducts = allProducts;
         }
+
+        console.log(`✨ Total final: ${finalProducts.length} produse returnate`);
         
         // Salvează în cache
         cache.set(cacheKey, finalProducts);
