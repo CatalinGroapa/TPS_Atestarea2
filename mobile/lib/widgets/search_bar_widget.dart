@@ -89,7 +89,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 40, 16, 24),
       color: AppColors.background,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,15 +99,19 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 32,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -1,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.64,
               height: 1.1,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
             'Comparam automat din 4 magazine pentru tine',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -117,57 +121,76 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  style: const TextStyle(color: AppColors.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: 'Cauta produs...',
-                    prefixIcon: const Icon(Icons.search,
-                        color: AppColors.textMuted, size: 20),
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: AppColors.borderLight),
+                child: SizedBox(
+                  height: 52,
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: AppColors.borderLight),
+                    decoration: InputDecoration(
+                      hintText: 'Cauta produs...',
+                      hintStyle: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 15,
+                      ),
+                      prefixIcon: const Icon(Icons.search,
+                          color: AppColors.textMuted, size: 20),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide:
+                            const BorderSide(color: AppColors.borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide:
+                            const BorderSide(color: AppColors.borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide:
+                            const BorderSide(color: AppColors.primary, width: 1),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: AppColors.primary, width: 1),
-                    ),
+                    onChanged: widget.onQueryChanged,
+                    onSubmitted: (_) {
+                      setState(() => _showDropdown = false);
+                      widget.onSearch(null);
+                    },
                   ),
-                  onChanged: widget.onQueryChanged,
-                  onSubmitted: (_) {
-                    setState(() => _showDropdown = false);
-                    widget.onSearch(null);
-                  },
                 ),
               ),
               const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {
+              GestureDetector(
+                onTap: () {
                   setState(() => _showDropdown = false);
                   _focusNode.unfocus();
                   widget.onSearch(null);
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Cauta',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
                   ),
                 ),
-                child: const Text('Cauta',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -177,9 +200,16 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
             Container(
               margin: const EdgeInsets.only(top: 4),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.background,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,12 +220,12 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
+                        const Row(
                           children: [
-                            const Icon(Icons.access_time,
+                            Icon(Icons.access_time,
                                 size: 14, color: AppColors.textMuted),
-                            const SizedBox(width: 6),
-                            const Text(
+                            SizedBox(width: 6),
+                            Text(
                               'Cautari recente',
                               style: TextStyle(
                                 color: AppColors.textMuted,
@@ -287,12 +317,12 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                          horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
                         border:
-                            Border.all(color: AppColors.borderLight),
+                            Border.all(color: AppColors.borderColor),
                       ),
                       child: Text(
                         pill['label']!,

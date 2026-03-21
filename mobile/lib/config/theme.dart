@@ -1,66 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFFFFFFFF);
-  static const Color secondary = Color(0xFF888888);
-  static const Color success = Color(0xFFFFFFFF);
-  static const Color warning = Color(0xFF888888);
-  static const Color danger = Color(0xFFFFFFFF);
-  static const Color background = Color(0xFF000000);
-  static const Color surface = Color(0xFF111111);
-  static const Color cardBg = Color(0xFF111111);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF888888);
-  static const Color textMuted = Color(0xFF555555);
-  static const Color borderColor = Color(0xFF222222);
-  static const Color borderLight = Color(0xFF333333);
-  static const Color surfaceHover = Color(0xFF1A1A1A);
+  static const Color primary = Color(0xFF000000);
+  static const Color secondary = Color(0xFF666666);
+  static const Color background = Color(0xFFFFFFFF);
+  static const Color surface = Color(0xFFF5F5F5);
+  static const Color cardBg = Color(0xFFFFFFFF);
+  static const Color textPrimary = Color(0xFF000000);
+  static const Color textSecondary = Color(0xFF666666);
+  static const Color textMuted = Color(0xFF999999);
+  static const Color borderColor = Color(0xFFE5E5E5);
+  static const Color borderLight = Color(0xFFEEEEEE);
+  static const Color surfaceHover = Color(0xFFF0F0F0);
 }
 
 class AppTheme {
-  static ThemeData get darkTheme {
+  static ThemeData get lightTheme {
     return ThemeData(
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.background,
       fontFamily: 'Inter',
-      colorScheme: const ColorScheme.dark(
+      colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
         surface: AppColors.surface,
-        error: Color(0xFFFFFFFF),
-        onPrimary: Colors.black,
+        error: Color(0xFF000000),
+        onPrimary: Colors.white,
         onSecondary: Colors.white,
         onSurface: AppColors.textPrimary,
-        onError: Colors.black,
+        onError: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
       cardTheme: CardThemeData(
         color: AppColors.cardBg,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.borderColor),
+          side: const BorderSide(color: AppColors.borderLight),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.borderLight),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.borderColor),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.borderLight),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.borderColor),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.primary, width: 1),
         ),
         labelStyle: const TextStyle(color: AppColors.textSecondary),
@@ -71,13 +70,13 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
-          foregroundColor: Colors.black,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           textStyle: const TextStyle(
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
         ),
@@ -91,13 +90,15 @@ class AppTheme {
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
           color: AppColors.textPrimary,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           fontSize: 28,
+          letterSpacing: -0.5,
         ),
         headlineMedium: TextStyle(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.w700,
           fontSize: 24,
+          letterSpacing: -0.3,
         ),
         headlineSmall: TextStyle(
           color: AppColors.textPrimary,
@@ -117,10 +118,12 @@ class AppTheme {
         bodyLarge: TextStyle(
           color: AppColors.textPrimary,
           fontSize: 16,
+          height: 1.5,
         ),
         bodyMedium: TextStyle(
           color: AppColors.textSecondary,
           fontSize: 14,
+          height: 1.5,
         ),
         bodySmall: TextStyle(
           color: AppColors.textMuted,
@@ -128,14 +131,14 @@ class AppTheme {
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.surface,
-        contentTextStyle: const TextStyle(color: AppColors.textPrimary),
+        backgroundColor: AppColors.primary,
+        contentTextStyle: const TextStyle(color: Colors.white),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),

@@ -57,7 +57,7 @@ class ProductModal extends StatelessWidget {
         };
 
     return Material(
-      color: Colors.black87,
+      color: Colors.black.withValues(alpha: 0.5),
       child: SafeArea(
         child: Column(
           children: [
@@ -66,10 +66,20 @@ class ProductModal extends StatelessWidget {
               alignment: Alignment.topRight,
               child: Padding(
                 padding: const EdgeInsets.all(8),
-                child: IconButton(
-                  onPressed: onClose,
-                  icon: const Icon(Icons.close,
-                      color: AppColors.textSecondary, size: 24),
+                child: GestureDetector(
+                  onTap: onClose,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.close,
+                          color: AppColors.textPrimary, size: 20),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -145,7 +155,7 @@ class ProductModal extends StatelessWidget {
                                       color: AppColors.textSecondary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5,
+                                      letterSpacing: 0.8,
                                     ),
                                   ),
                                 ),
@@ -187,7 +197,7 @@ class ProductModal extends StatelessWidget {
                                   style: const TextStyle(
                                     color: AppColors.textPrimary,
                                     fontSize: 32,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w800,
                                     fontFeatures: [
                                       FontFeature.tabularFigures()
                                     ],
@@ -227,19 +237,20 @@ class ProductModal extends StatelessWidget {
                                     size: 16,
                                     color: AppColors.primary);
                               }
-                              return const Icon(Icons.star_border,
+                              return Icon(Icons.star_border,
                                   size: 16,
-                                  color: AppColors.textMuted);
+                                  color: AppColors.primary
+                                      .withValues(alpha: 0.3));
                             }),
                           ),
                           Text(
                             product.rating.toStringAsFixed(1),
                             style: const TextStyle(
-                              color: AppColors.textSecondary,
+                              color: AppColors.textPrimary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const Text('\u00B7',
+                          const Text('\u{00B7}',
                               style: TextStyle(
                                   color: AppColors.textMuted)),
                           Text(
@@ -258,7 +269,7 @@ class ProductModal extends StatelessWidget {
                               border: Border.all(
                                 color: product.inStock
                                     ? AppColors.primary
-                                    : AppColors.borderLight,
+                                    : AppColors.borderColor,
                               ),
                             ),
                             child: Text(
@@ -267,7 +278,7 @@ class ProductModal extends StatelessWidget {
                                   : 'Indisponibil',
                               style: TextStyle(
                                 color: product.inStock
-                                    ? Colors.black
+                                    ? Colors.white
                                     : AppColors.textMuted,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -425,7 +436,7 @@ class ProductModal extends StatelessWidget {
                                               .textPrimary,
                                           fontSize: 24,
                                           fontWeight:
-                                              FontWeight.w700,
+                                              FontWeight.w800,
                                           fontFeatures: [
                                             FontFeature
                                                 .tabularFigures()
@@ -487,12 +498,21 @@ class ProductModal extends StatelessWidget {
                                   padding:
                                       const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppColors.surface,
+                                    color: AppColors.background,
                                     borderRadius:
                                         BorderRadius.circular(12),
                                     border: Border.all(
                                         color: AppColors
                                             .borderColor),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.04),
+                                        blurRadius: 8,
+                                        offset:
+                                            const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
@@ -513,7 +533,7 @@ class ProductModal extends StatelessWidget {
                                                   Container(
                                             height: 80,
                                             color: AppColors
-                                                .background,
+                                                .surface,
                                             child: const Icon(
                                                 Icons
                                                     .image_not_supported,
@@ -529,7 +549,7 @@ class ProductModal extends StatelessWidget {
                                           color:
                                               AppColors.textMuted,
                                           fontSize: 10,
-                                          letterSpacing: 0.5,
+                                          letterSpacing: 0.8,
                                           fontWeight:
                                               FontWeight.w600,
                                         ),
@@ -612,7 +632,7 @@ class ProductModal extends StatelessWidget {
                                             .textPrimary,
                                         fontSize: 24,
                                         fontWeight:
-                                            FontWeight.w700,
+                                            FontWeight.w800,
                                         fontFeatures: [
                                           FontFeature
                                               .tabularFigures()
@@ -623,7 +643,7 @@ class ProductModal extends StatelessWidget {
                                       'MDL',
                                       style: TextStyle(
                                         color: AppColors
-                                            .textSecondary,
+                                            .textMuted,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -653,10 +673,10 @@ class ProductModal extends StatelessWidget {
                                       textAlign:
                                           TextAlign.center,
                                       style: const TextStyle(
-                                        color: Colors.black,
+                                        color: Colors.white,
                                         fontSize: 15,
                                         fontWeight:
-                                            FontWeight.w700,
+                                            FontWeight.w600,
                                       ),
                                     ),
                                   ),

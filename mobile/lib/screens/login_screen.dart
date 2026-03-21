@@ -49,10 +49,9 @@ class _LoginScreenState extends State<LoginScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text,
-            style: TextStyle(
-                color: isError ? Colors.black : Colors.black)),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: isError
-            ? const Color(0xFF888888)
+            ? const Color(0xFF333333)
             : AppColors.primary,
         behavior: SnackBarBehavior.floating,
       ),
@@ -168,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen>
                 const Text(
                   'PulsePrice',
                   style: TextStyle(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     fontSize: 28,
                     color: AppColors.textPrimary,
                     letterSpacing: -0.5,
@@ -188,7 +187,6 @@ class _LoginScreenState extends State<LoginScreen>
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.borderColor),
                   ),
                   child: TabBar(
                     controller: _tabController,
@@ -197,8 +195,8 @@ class _LoginScreenState extends State<LoginScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     indicatorSize: TabBarIndicatorSize.tab,
-                    labelColor: Colors.black,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+                    labelColor: Colors.white,
+                    labelStyle: const TextStyle(fontWeight: FontWeight.w600),
                     unselectedLabelColor: AppColors.textSecondary,
                     dividerColor: Colors.transparent,
                     tabs: const [
@@ -252,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen>
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textPrimary,
                       side:
-                          const BorderSide(color: AppColors.borderLight),
+                          const BorderSide(color: AppColors.borderColor),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../config/theme.dart';
 import '../models/product.dart';
 
-class ProductCard extends StatelessWidget {
+class ProductCard extends StatefulWidget {
   final Product product;
   final int rank;
   final bool isWishlisted;
@@ -24,14 +24,36 @@ class ProductCard extends StatelessWidget {
   });
 
   @override
+  State<ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<ProductCard> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onDetailsClick,
-      child: Container(
+      onTap: widget.onDetailsClick,
+      onTapDown: (_) => setState(() => _hovering = true),
+      onTapUp: (_) => setState(() => _hovering = false),
+      onTapCancel: () => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.ease,
+        transform: Matrix4.translationValues(0, _hovering ? -2 : 0, 0),
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderColor),
+          border: Border.all(
+            color: _hovering ? const Color(0xFFDDDDDD) : AppColors.borderLight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _hovering ? 0.1 : 0.06),
+              blurRadius: _hovering ? 30 : 3,
+              offset: Offset(0, _hovering ? 8 : 1),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -42,13 +64,14 @@ class ProductCard extends StatelessWidget {
               children: [
                 AspectRatio(
                   aspectRatio: 4 / 3,
-                  child: CachedNetworkImage(
-                    imageUrl: product.image,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      color: AppColors.surface,
-                      child: const Center(
+                  child: Container(
+                    color: AppColors.surface,
+                    padding: const EdgeInsets.all(12),
+                    child: CachedNetworkImage(
+                      imageUrl: widget.product.image,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                      placeholder: (_, __) => const Center(
                         child: SizedBox(
                           width: 20,
                           height: 20,
@@ -58,10 +81,7 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: AppColors.surface,
-                      child: const Center(
+                      errorWidget: (_, __, ___) => const Center(
                         child: Icon(Icons.image_not_supported,
                             color: AppColors.textMuted, size: 28),
                       ),
@@ -70,21 +90,22 @@ class ProductCard extends StatelessWidget {
                 ),
                 // Rank badge
                 Positioned(
-                  top: 8,
-                  left: 8,
+                  top: 10,
+                  left: 10,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '#$rank',
+                      '#${widget.rank}',
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
+                        fontFamily: 'monospace',
                         fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -92,22 +113,27 @@ class ProductCard extends StatelessWidget {
                 ),
                 // Wishlist button
                 Positioned(
-                  top: 8,
-                  right: 8,
+                  top: 10,
+                  right: 10,
                   child: GestureDetector(
-                    onTap: onWishlistToggle,
+                    onTap: widget.onWishlistToggle,
                     child: Container(
-                      padding: const EdgeInsets.all(6),
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: AppColors.background.withValues(alpha: 0.7),
+                        color: Colors.white.withValues(alpha: 0.9),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
-                        isWishlisted
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: AppColors.primary,
-                        size: 18,
+                      child: Center(
+                        child: Icon(
+                          widget.isWishlisted
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: widget.isWishlisted
+                              ? AppColors.primary
+                              : const Color(0xFF333333),
+                          size: 18,
+                        ),
                       ),
                     ),
                   ),
@@ -118,29 +144,29 @@ class ProductCard extends StatelessWidget {
             // Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Store name
                     Text(
-                      product.store.toUpperCase(),
+                      widget.product.store.toUpperCase(),
                       style: const TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.8,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     // Title
                     Text(
-                      product.title,
+                      widget.product.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         height: 1.3,
                       ),
@@ -150,22 +176,23 @@ class ProductCard extends StatelessWidget {
                     Row(
                       children: [
                         ...List.generate(5, (i) {
-                          final rating = product.rating;
+                          final rating = widget.product.rating;
                           if (i < rating.floor()) {
                             return const Icon(Icons.star,
-                                size: 12, color: AppColors.primary);
+                                size: 11, color: AppColors.primary);
                           } else if (i < rating.ceil() &&
                               (rating % 1) >= 0.5) {
                             return const Icon(Icons.star_half,
-                                size: 12, color: AppColors.primary);
+                                size: 11, color: AppColors.primary);
                           }
-                          return const Icon(Icons.star_border,
-                              size: 12, color: AppColors.textMuted);
+                          return Icon(Icons.star_border,
+                              size: 11,
+                              color: AppColors.primary.withValues(alpha: 0.3));
                         }),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Flexible(
                           child: Text(
-                            '(${product.reviewCount})',
+                            '(${widget.product.reviewCount})',
                             style: const TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 11,
@@ -176,73 +203,86 @@ class ProductCard extends StatelessWidget {
                       ],
                     ),
                     // Stock status
-                    if (!product.inStock)
+                    if (!widget.product.inStock)
                       const Padding(
-                        padding: EdgeInsets.only(top: 4),
+                        padding: EdgeInsets.only(top: 3),
                         child: Text(
                           'Indisponibil',
                           style: TextStyle(
                             color: AppColors.textMuted,
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     const Spacer(),
-                    // Price and details
+                    // Separator
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      height: 1,
+                      color: const Color(0xFFF0F0F0),
+                    ),
+                    // Price
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
                       children: [
                         Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                formatPrice(product.price)
-                                    .replaceAll(' MDL', ''),
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  fontFeatures: [
-                                    FontFeature.tabularFigures()
-                                  ],
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const Text(
-                                'MDL',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            widget.formatPrice(widget.product.price)
+                                .replaceAll(' MDL', ''),
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              fontFeatures: [
+                                FontFeature.tabularFigures()
+                              ],
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: onDetailsClick,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color: AppColors.borderLight),
-                            ),
-                            child: const Text(
-                              'Detalii',
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                        const SizedBox(width: 3),
+                        const Text(
+                          'MDL',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Details button
+                    SizedBox(
+                      width: double.infinity,
+                      child: GestureDetector(
+                        onTap: widget.onDetailsClick,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Detalii',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(width: 2),
+                              Icon(Icons.arrow_forward,
+                                  color: Colors.white, size: 13),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),

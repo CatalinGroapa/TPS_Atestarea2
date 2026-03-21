@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../config/theme.dart';
@@ -22,13 +23,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Engines
   late final NLPEngine _nlpEngine;
   late final RecommendationEngine _recommendationEngine;
   final ApiService _apiService = ApiService();
   final StorageService _storageService = StorageService();
 
-  // State
   String _query = '';
   List<Product> _products = [];
   List<Product> _scoredResults = [];
@@ -65,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- Helpers ---
   String formatPrice(double price) {
     final safePrice = price.isFinite ? price : 0.0;
     final formatted = safePrice.toStringAsFixed(0).replaceAllMapped(
@@ -84,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
           : product.title,
       image: product.image.isNotEmpty
           ? product.image
-          : 'https://via.placeholder.com/400x300/1e293b/6366f1?text=Produs',
+          : 'https://via.placeholder.com/400x300/F5F5F5/999999?text=Produs',
     );
   }
 
@@ -119,7 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return _wishlist.any((item) => item.id == productId);
   }
 
-  // --- Apply filters ---
   void _applyFiltersAndDisplay(
       List<Product> prods, String q, Map<String, dynamic> filt) {
     final parsedFilters = <String, dynamic>{
@@ -145,7 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // --- Search ---
   Future<void> _performSearch(String? overrideQuery) async {
     final q = (overrideQuery ?? _query).trim();
     if (q.isEmpty) {
@@ -153,7 +149,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Te rog introdu un termen de cautare'),
-            backgroundColor: AppColors.warning,
           ),
         );
       }
@@ -170,7 +165,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // Interpret query with AI
       final interpretation = await _apiService.interpretQuery(q);
       final searchTerms = (interpretation['searchTerms'] as List<dynamic>?)
               ?.map((e) => e.toString())
@@ -183,7 +177,6 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
 
-      // Search products
       final rawProducts = await _apiService.searchProducts(
           searchTerms.isNotEmpty ? searchTerms[0] : q);
 
@@ -205,7 +198,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _products = normalizedProducts;
       });
 
-      // Small delay for AI processing effect
       await Future.delayed(const Duration(milliseconds: 800));
 
       _applyFiltersAndDisplay(normalizedProducts, q, _filters);
@@ -217,7 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- Auth ---
   Future<void> _handleLogout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -227,7 +218,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- Wishlist handlers ---
   void _handleRemoveFromWishlist(WishlistItem item) {
     setState(() {
       _wishlist.removeWhere((w) => w.id == item.id);
@@ -251,79 +241,129 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        title: Row(
-          children: [
-            const Text(
-              'PulsePrice',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Store badges
-            ..._buildStoreBadges(),
-          ],
-        ),
-        actions: [
-          // User name
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Center(
-              child: Text(
-                widget.user.displayName ?? 'User',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-          // Wishlist button with badge
-          Stack(
-            children: [
-              IconButton(
-                onPressed: () => setState(() => _showWishlist = true),
-                icon: const Icon(Icons.favorite, color: AppColors.danger),
-                tooltip: 'Lista de favorite',
-              ),
-              if (_wishlist.isNotEmpty)
-                Positioned(
-                  right: 4,
-                  top: 4,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.danger,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '${_wishlist.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          // Logout
-          IconButton(
-            onPressed: _handleLogout,
-            icon: const Icon(Icons.logout, color: AppColors.textSecondary),
-            tooltip: 'Deconectare',
-          ),
-        ],
-      ),
       body: Stack(
         children: [
           CustomScrollView(
             slivers: [
+              // Sticky header with blur
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _StickyHeaderDelegate(
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xCCFFFFFF),
+                          border: Border(
+                            bottom:
+                                BorderSide(color: AppColors.borderColor, width: 1),
+                          ),
+                        ),
+                        child: SafeArea(
+                          bottom: false,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            child: Row(
+                              children: [
+                                const Text(
+                                  'PulsePrice',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 20,
+                                    color: AppColors.textPrimary,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  widget.user.displayName ?? 'User',
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _showWishlist = true),
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: AppColors.borderColor),
+                                    ),
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        const Center(
+                                          child: Icon(
+                                            Icons.favorite_border,
+                                            color: AppColors.textSecondary,
+                                            size: 18,
+                                          ),
+                                        ),
+                                        if (_wishlist.isNotEmpty)
+                                          Positioned(
+                                            right: -2,
+                                            top: -2,
+                                            child: Container(
+                                              width: 16,
+                                              height: 16,
+                                              decoration: const BoxDecoration(
+                                                color: AppColors.primary,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  '${_wishlist.length}',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: _handleLogout,
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: AppColors.borderColor),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.logout,
+                                        color: AppColors.textSecondary,
+                                        size: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  height: MediaQuery.of(context).padding.top + 60,
+                ),
+              ),
+
               // Search bar
               SliverToBoxAdapter(
                 child: SearchBarWidget(
@@ -354,12 +394,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                        border: Border.all(color: AppColors.borderColor),
                       ),
                       child: Row(
                         children: [
-                          const Text('🤖',
-                              style: TextStyle(fontSize: 18)),
+                          const Icon(Icons.auto_awesome,
+                              size: 16, color: AppColors.textMuted),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -411,7 +451,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.3,
                           ),
                         ),
                         Text(
@@ -426,14 +467,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       childAspectRatio: 0.52,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -456,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                const SliverToBoxAdapter(child: SizedBox(height: 32)),
               ],
 
               // Empty states
@@ -510,23 +551,28 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
-  List<Widget> _buildStoreBadges() {
-    const stores = [
-      {'name': 'Darwin', 'emoji': '\u{1F98E}'},
-      {'name': 'Cactus', 'emoji': '\u{1F335}'},
-      {'name': 'Bomba', 'emoji': '\u{1F4A3}'},
-      {'name': 'Panda', 'emoji': '\u{1F43C}'},
-    ];
-    return stores
-        .map((store) => Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Text(
-                store['emoji']!,
-                style: const TextStyle(fontSize: 14),
-              ),
-            ))
-        .toList();
+class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double height;
+
+  _StickyHeaderDelegate({required this.child, required this.height});
+
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox(height: height, child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyHeaderDelegate oldDelegate) {
+    return height != oldDelegate.height || child != oldDelegate.child;
   }
 }
 
@@ -541,22 +587,28 @@ class _LoadingState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: AppColors.primary),
+          const SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 2,
+            ),
+          ),
           const SizedBox(height: 24),
           const Text(
-            'Analizez produsele cu AI...',
+            'Se cauta...',
             style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+              color: AppColors.textMuted,
+              fontSize: 14,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Caut in Darwin \u{1F98E}, Cactus \u{1F335}, Bomba \u{1F4A3} si PandaShop \u{1F43C}',
+            'Darwin \u{00B7} Cactus \u{00B7} Bomba \u{00B7} PandaShop',
             style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 14,
+              color: AppColors.textMuted.withValues(alpha: 0.6),
+              fontSize: 13,
             ),
             textAlign: TextAlign.center,
           ),
@@ -575,17 +627,17 @@ class _WelcomeState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search, size: 64, color: AppColors.textMuted),
+          Icon(Icons.search, size: 48, color: AppColors.textMuted.withValues(alpha: 0.4)),
           const SizedBox(height: 16),
           const Text(
-            'Cautam produsele in Darwin, Cactus, Bomba si PandaShop',
+            'Cautam in Darwin, Cactus, Bomba si PandaShop',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Preturi in Lei MDL \u{2022} Analiza AI \u{2022} Comparare automata',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+          const Text(
+            'Preturi in Lei MDL  /  Analiza AI  /  Comparare automata',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
           ),
         ],
       ),
@@ -604,14 +656,15 @@ class _NoResultsState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.info_outline, size: 64, color: AppColors.textMuted),
+          Icon(Icons.info_outline,
+              size: 48, color: AppColors.textMuted.withValues(alpha: 0.4)),
           const SizedBox(height: 16),
           Text(
             'Nu am gasit rezultate pentru "$query"',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -620,10 +673,25 @@ class _NoResultsState extends StatelessWidget {
             'Incearca sa modifici termenii de cautare sau filtrele',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: onReset,
-            child: const Text('Intoarce-te la inceput'),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: onReset,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Intoarce-te la inceput',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -640,13 +708,14 @@ class _ErrorState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: AppColors.danger),
+          Icon(Icons.error_outline,
+              size: 48, color: AppColors.textMuted.withValues(alpha: 0.4)),
           const SizedBox(height: 16),
           const Text(
-            'Oops! A aparut o eroare',
+            'A aparut o eroare',
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),

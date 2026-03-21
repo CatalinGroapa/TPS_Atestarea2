@@ -31,7 +31,7 @@ class WishlistModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black87,
+      color: Colors.black.withValues(alpha: 0.5),
       child: SafeArea(
         child: Column(
           children: [
@@ -40,10 +40,20 @@ class WishlistModal extends StatelessWidget {
               alignment: Alignment.topRight,
               child: Padding(
                 padding: const EdgeInsets.all(8),
-                child: IconButton(
-                  onPressed: onClose,
-                  icon: const Icon(Icons.close,
-                      color: AppColors.textSecondary, size: 24),
+                child: GestureDetector(
+                  onTap: onClose,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.close,
+                          color: AppColors.textPrimary, size: 20),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -94,11 +104,18 @@ class WishlistModal extends StatelessWidget {
                                     const EdgeInsets.only(bottom: 12),
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surface,
+                                  color: AppColors.background,
                                   borderRadius:
                                       BorderRadius.circular(12),
                                   border: Border.all(
                                       color: AppColors.borderColor),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.04),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: Row(
                                   children: [
@@ -114,16 +131,14 @@ class WishlistModal extends StatelessWidget {
                                             Container(
                                           width: 64,
                                           height: 64,
-                                          color:
-                                              AppColors.background,
+                                          color: AppColors.surface,
                                         ),
                                         errorWidget:
                                             (_, __, ___) =>
                                                 Container(
                                           width: 64,
                                           height: 64,
-                                          color:
-                                              AppColors.background,
+                                          color: AppColors.surface,
                                           child: const Icon(
                                             Icons
                                                 .image_not_supported,
@@ -162,7 +177,7 @@ class WishlistModal extends StatelessWidget {
                                               color: AppColors
                                                   .textMuted,
                                               fontSize: 11,
-                                              letterSpacing: 0.5,
+                                              letterSpacing: 0.8,
                                               fontWeight:
                                                   FontWeight.w600,
                                             ),
@@ -186,70 +201,75 @@ class WishlistModal extends StatelessWidget {
                                       children: [
                                         SizedBox(
                                           width: 80,
-                                          child: OutlinedButton(
-                                            onPressed: () =>
+                                          child: GestureDetector(
+                                            onTap: () =>
                                                 _openUrl(item
                                                     .productUrl),
-                                            style: OutlinedButton
-                                                .styleFrom(
-                                              foregroundColor:
-                                                  AppColors
-                                                      .textPrimary,
-                                              side: const BorderSide(
-                                                  color: AppColors
-                                                      .borderLight),
+                                            child: Container(
                                               padding:
                                                   const EdgeInsets
                                                       .symmetric(
                                                       vertical: 8),
-                                              textStyle:
-                                                  const TextStyle(
-                                                      fontSize:
-                                                          12),
-                                              shape:
-                                                  RoundedRectangleBorder(
+                                              decoration:
+                                                  BoxDecoration(
+                                                color: AppColors
+                                                    .primary,
                                                 borderRadius:
                                                     BorderRadius
                                                         .circular(
                                                             8),
                                               ),
+                                              child: const Center(
+                                                child: Text(
+                                                  'Produs',
+                                                  style: TextStyle(
+                                                    color: Colors
+                                                        .white,
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        FontWeight
+                                                            .w600,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
-                                            child: const Text(
-                                                'Produs'),
                                           ),
                                         ),
                                         const SizedBox(height: 6),
                                         SizedBox(
                                           width: 80,
-                                          child: OutlinedButton(
-                                            onPressed: () =>
+                                          child: GestureDetector(
+                                            onTap: () =>
                                                 onRemove(item),
-                                            style: OutlinedButton
-                                                .styleFrom(
-                                              foregroundColor:
-                                                  AppColors
-                                                      .textMuted,
-                                              side: const BorderSide(
-                                                  color: AppColors
-                                                      .borderColor),
+                                            child: Container(
                                               padding:
                                                   const EdgeInsets
                                                       .symmetric(
                                                       vertical: 8),
-                                              textStyle:
-                                                  const TextStyle(
-                                                      fontSize:
-                                                          12),
-                                              shape:
-                                                  RoundedRectangleBorder(
+                                              decoration:
+                                                  BoxDecoration(
                                                 borderRadius:
                                                     BorderRadius
                                                         .circular(
                                                             8),
+                                                border: Border.all(
+                                                    color: AppColors
+                                                        .borderColor),
+                                              ),
+                                              child: const Center(
+                                                child: Text(
+                                                  'Elimina',
+                                                  style: TextStyle(
+                                                    color: AppColors
+                                                        .textMuted,
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        FontWeight
+                                                            .w600,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                            child: const Text(
-                                                'Elimina'),
                                           ),
                                         ),
                                       ],
@@ -266,13 +286,17 @@ class WishlistModal extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 12),
                           child: SizedBox(
                             width: double.infinity,
-                            child: OutlinedButton(
-                              onPressed: () {
+                            child: GestureDetector(
+                              onTap: () {
                                 showDialog(
                                   context: context,
                                   builder: (ctx) => AlertDialog(
                                     backgroundColor:
-                                        AppColors.surface,
+                                        AppColors.background,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(16),
+                                    ),
                                     title: const Text(
                                       'Confirmare',
                                       style: TextStyle(
@@ -306,27 +330,36 @@ class WishlistModal extends StatelessWidget {
                                           'Sterge',
                                           style: TextStyle(
                                               color: AppColors
-                                                  .textPrimary),
+                                                  .textPrimary,
+                                              fontWeight:
+                                                  FontWeight.w600),
                                         ),
                                       ),
                                     ],
                                   ),
                                 );
                               },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor:
-                                    AppColors.textSecondary,
-                                side: const BorderSide(
-                                    color: AppColors.borderLight),
+                              child: Container(
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 14),
-                                shape: RoundedRectangleBorder(
+                                decoration: BoxDecoration(
                                   borderRadius:
-                                      BorderRadius.circular(8),
+                                      BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: AppColors.borderColor),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'Sterge toate favoritele',
+                                    style: TextStyle(
+                                      color:
+                                          AppColors.textSecondary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
                               ),
-                              child: const Text(
-                                  'Sterge toate favoritele'),
                             ),
                           ),
                         ),

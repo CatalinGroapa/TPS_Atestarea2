@@ -46,17 +46,17 @@ class FiltersToolbar extends StatelessWidget {
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 8),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       borderSide:
-                          const BorderSide(color: AppColors.borderLight),
+                          const BorderSide(color: AppColors.borderColor),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       borderSide:
-                          const BorderSide(color: AppColors.borderLight),
+                          const BorderSide(color: AppColors.borderColor),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       borderSide:
                           const BorderSide(color: AppColors.primary),
                     ),
@@ -80,15 +80,19 @@ class FiltersToolbar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.borderLight),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderColor),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: (filters['minRating'] ?? 0.0).toString(),
-                    dropdownColor: AppColors.surface,
+                    dropdownColor: AppColors.background,
                     style: const TextStyle(
-                        color: AppColors.textPrimary, fontSize: 13),
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500),
+                    icon: const Icon(Icons.keyboard_arrow_down,
+                        size: 18, color: AppColors.textMuted),
                     items: const [
                       DropdownMenuItem(
                           value: '0.0', child: Text('Oricare')),
@@ -118,20 +122,25 @@ class FiltersToolbar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.borderLight),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderColor),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: filters['sortBy']?.toString() ?? 'score',
-                    dropdownColor: AppColors.surface,
+                    dropdownColor: AppColors.background,
                     style: const TextStyle(
-                        color: AppColors.textPrimary, fontSize: 13),
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500),
+                    icon: const Icon(Icons.keyboard_arrow_down,
+                        size: 18, color: AppColors.textMuted),
                     items: const [
                       DropdownMenuItem(
                           value: 'score', child: Text('Recomandat')),
                       DropdownMenuItem(
-                          value: 'price-asc', child: Text('Pret \u2191')),
+                          value: 'price-asc',
+                          child: Text('Pret \u2191')),
                       DropdownMenuItem(
                           value: 'price-desc',
                           child: Text('Pret \u2193')),
@@ -151,32 +160,54 @@ class FiltersToolbar extends StatelessWidget {
             const SizedBox(width: 8),
 
             // In stock toggle
-            Row(
-              children: [
-                Transform.scale(
-                  scale: 0.8,
-                  child: Switch(
-                    value: filters['inStock'] == true,
-                    onChanged: (value) {
-                      final newFilters =
-                          Map<String, dynamic>.from(filters);
-                      newFilters['inStock'] = value;
-                      onChanged(newFilters);
-                    },
-                    activeTrackColor: AppColors.primary,
-                    activeThumbColor: Colors.black,
-                    inactiveThumbColor: AppColors.textMuted,
-                    inactiveTrackColor: AppColors.surface,
+            _FilterChip(
+              label: 'Disponibil',
+              child: Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: filters['inStock'] == true
+                      ? AppColors.primary
+                      : AppColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: filters['inStock'] == true
+                        ? AppColors.primary
+                        : AppColors.borderColor,
                   ),
                 ),
-                const Text(
-                  'In stoc',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                  ),
+                child: Row(
+                  children: [
+                    Transform.scale(
+                      scale: 0.7,
+                      child: Switch(
+                        value: filters['inStock'] == true,
+                        onChanged: (value) {
+                          final newFilters =
+                              Map<String, dynamic>.from(filters);
+                          newFilters['inStock'] = value;
+                          onChanged(newFilters);
+                        },
+                        activeTrackColor: Colors.white.withValues(alpha: 0.3),
+                        activeThumbColor: Colors.white,
+                        inactiveThumbColor: AppColors.textMuted,
+                        inactiveTrackColor: AppColors.borderColor,
+                      ),
+                    ),
+                    Text(
+                      'In stoc',
+                      style: TextStyle(
+                        color: filters['inStock'] == true
+                            ? Colors.white
+                            : const Color(0xFF333333),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                 ),
-              ],
+              ),
             ),
           ],
         ),
