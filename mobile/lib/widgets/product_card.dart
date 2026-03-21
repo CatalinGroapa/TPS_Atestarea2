@@ -23,101 +23,70 @@ class ProductCard extends StatelessWidget {
     required this.onWishlistToggle,
   });
 
-  static const Map<String, String> storeEmoji = {
-    'Darwin': '\u{1F98E}',
-    'Cactus': '\u{1F335}',
-    'Bomba': '\u{1F4A3}',
-    'PandaShop': '\u{1F43C}',
-  };
-
-  Color get _scoreColor {
-    final score = product.recommendationScore ?? 0;
-    if (score >= 80) return AppColors.success;
-    if (score >= 60) return AppColors.warning;
-    return AppColors.primary;
-  }
-
-  String _generateStars(double rating) {
-    final fullStars = rating.floor();
-    final hasHalf = (rating % 1) >= 0.5;
-    final empty = 5 - fullStars - (hasHalf ? 1 : 0);
-    return '\u2B50' * fullStars +
-        (hasHalf ? '\u2728' : '') +
-        '\u2606' * empty;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: AppColors.cardBg,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.borderColor),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onDetailsClick,
+    return GestureDetector(
+      onTap: onDetailsClick,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderColor),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image with score badge and wishlist button
+            // Image with rank badge and wishlist button
             Stack(
               children: [
-                CachedNetworkImage(
-                  imageUrl: product.image,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    height: 120,
-                    color: AppColors.surface,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary,
+                AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: CachedNetworkImage(
+                    imageUrl: product.image,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      color: AppColors.surface,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      color: AppColors.surface,
+                      child: const Center(
+                        child: Icon(Icons.image_not_supported,
+                            color: AppColors.textMuted, size: 28),
                       ),
                     ),
                   ),
-                  errorWidget: (_, __, ___) => Container(
-                    height: 120,
-                    color: AppColors.surface,
-                    child: const Center(
-                      child: Icon(Icons.image_not_supported,
-                          color: AppColors.textMuted, size: 32),
-                    ),
-                  ),
                 ),
-                // Score badge
+                // Rank badge
                 Positioned(
                   top: 8,
                   left: 8,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _scoreColor,
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '\u{1F3C6} #$rank',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '${product.recommendationScore ?? 0}/100',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      '#$rank',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ),
                 ),
@@ -133,9 +102,12 @@ class ProductCard extends StatelessWidget {
                         color: AppColors.background.withValues(alpha: 0.7),
                         shape: BoxShape.circle,
                       ),
-                      child: Text(
-                        isWishlisted ? '\u2764\uFE0F' : '\u{1F90D}',
-                        style: const TextStyle(fontSize: 16),
+                      child: Icon(
+                        isWishlisted
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: AppColors.primary,
+                        size: 18,
                       ),
                     ),
                   ),
@@ -146,17 +118,18 @@ class ProductCard extends StatelessWidget {
             // Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Store name
                     Text(
-                      '${storeEmoji[product.store] ?? '\u{1F3EA}'} ${product.store}',
+                      product.store.toUpperCase(),
                       style: const TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -167,94 +140,83 @@ class ProductCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     // Rating
                     Row(
                       children: [
-                        Text(
-                          _generateStars(product.rating),
-                          style: const TextStyle(fontSize: 10),
-                        ),
+                        ...List.generate(5, (i) {
+                          final rating = product.rating;
+                          if (i < rating.floor()) {
+                            return const Icon(Icons.star,
+                                size: 12, color: AppColors.primary);
+                          } else if (i < rating.ceil() &&
+                              (rating % 1) >= 0.5) {
+                            return const Icon(Icons.star_half,
+                                size: 12, color: AppColors.primary);
+                          }
+                          return const Icon(Icons.star_border,
+                              size: 12, color: AppColors.textMuted);
+                        }),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            '${product.rating.toStringAsFixed(1)} (${product.reviewCount})',
+                            '(${product.reviewCount})',
                             style: const TextStyle(
                               color: AppColors.textMuted,
-                              fontSize: 10,
+                              fontSize: 11,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    // Feature tags
-                    if (reasons.isNotEmpty)
-                      Wrap(
-                        spacing: 4,
-                        runSpacing: 2,
-                        children: reasons.take(2).map((reason) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '\u2713 $reason',
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 9,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                      ),
                     // Stock status
                     if (!product.inStock)
                       const Padding(
                         padding: EdgeInsets.only(top: 4),
                         child: Text(
-                          '\u26A0\uFE0F Indisponibil',
+                          'Indisponibil',
                           style: TextStyle(
-                            color: AppColors.danger,
+                            color: AppColors.textMuted,
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     const Spacer(),
-                    // Price and details button
+                    // Price and details
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Flexible(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Pret',
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 10,
-                                ),
-                              ),
                               Text(
-                                formatPrice(product.price),
+                                formatPrice(product.price)
+                                    .replaceAll(' MDL', ''),
                                 style: const TextStyle(
-                                  color: AppColors.success,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  fontFeatures: [
+                                    FontFeature.tabularFigures()
+                                  ],
                                 ),
                                 overflow: TextOverflow.ellipsis,
+                              ),
+                              const Text(
+                                'MDL',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -263,16 +225,18 @@ class ProductCard extends StatelessWidget {
                           onTap: onDetailsClick,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 6),
+                                horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
-                              color: AppColors.primary,
+                              color: Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: AppColors.borderLight),
                             ),
                             child: const Text(
-                              'Detalii \u2192',
+                              'Detalii',
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
+                                color: AppColors.textPrimary,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

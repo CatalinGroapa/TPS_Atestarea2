@@ -16,9 +16,9 @@ class FiltersToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         border: Border(
           bottom: BorderSide(color: AppColors.borderColor),
         ),
@@ -39,21 +39,21 @@ class FiltersToolbar extends StatelessWidget {
                       color: AppColors.textPrimary, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'MDL',
-                    hintStyle:
-                        const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    hintStyle: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 13),
                     filled: true,
-                    fillColor: AppColors.background,
+                    fillColor: AppColors.surface,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 8),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide:
-                          const BorderSide(color: AppColors.borderColor),
+                          const BorderSide(color: AppColors.borderLight),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide:
-                          const BorderSide(color: AppColors.borderColor),
+                          const BorderSide(color: AppColors.borderLight),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -70,7 +70,7 @@ class FiltersToolbar extends StatelessWidget {
                 ),
               ),
             ),
-            _separator(),
+            const SizedBox(width: 8),
 
             // Rating dropdown
             _FilterChip(
@@ -79,9 +79,9 @@ class FiltersToolbar extends StatelessWidget {
                 height: 36,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.borderColor),
+                  border: Border.all(color: AppColors.borderLight),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -90,14 +90,16 @@ class FiltersToolbar extends StatelessWidget {
                     style: const TextStyle(
                         color: AppColors.textPrimary, fontSize: 13),
                     items: const [
-                      DropdownMenuItem(value: '0.0', child: Text('Oricare')),
-                      DropdownMenuItem(value: '3.0', child: Text('3+ \u2B50')),
-                      DropdownMenuItem(value: '4.0', child: Text('4+ \u2B50')),
                       DropdownMenuItem(
-                          value: '4.5', child: Text('4.5+ \u2B50')),
+                          value: '0.0', child: Text('Oricare')),
+                      DropdownMenuItem(value: '3.0', child: Text('3+')),
+                      DropdownMenuItem(value: '4.0', child: Text('4+')),
+                      DropdownMenuItem(
+                          value: '4.5', child: Text('4.5+')),
                     ],
                     onChanged: (value) {
-                      final newFilters = Map<String, dynamic>.from(filters);
+                      final newFilters =
+                          Map<String, dynamic>.from(filters);
                       newFilters['minRating'] =
                           double.tryParse(value ?? '0') ?? 0.0;
                       onChanged(newFilters);
@@ -106,7 +108,7 @@ class FiltersToolbar extends StatelessWidget {
                 ),
               ),
             ),
-            _separator(),
+            const SizedBox(width: 8),
 
             // Sort dropdown
             _FilterChip(
@@ -115,9 +117,9 @@ class FiltersToolbar extends StatelessWidget {
                 height: 36,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.borderColor),
+                  border: Border.all(color: AppColors.borderLight),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -131,12 +133,14 @@ class FiltersToolbar extends StatelessWidget {
                       DropdownMenuItem(
                           value: 'price-asc', child: Text('Pret \u2191')),
                       DropdownMenuItem(
-                          value: 'price-desc', child: Text('Pret \u2193')),
+                          value: 'price-desc',
+                          child: Text('Pret \u2193')),
                       DropdownMenuItem(
                           value: 'rating', child: Text('Rating')),
                     ],
                     onChanged: (value) {
-                      final newFilters = Map<String, dynamic>.from(filters);
+                      final newFilters =
+                          Map<String, dynamic>.from(filters);
                       newFilters['sortBy'] = value ?? 'score';
                       onChanged(newFilters);
                     },
@@ -144,7 +148,7 @@ class FiltersToolbar extends StatelessWidget {
                 ),
               ),
             ),
-            _separator(),
+            const SizedBox(width: 8),
 
             // In stock toggle
             Row(
@@ -154,18 +158,19 @@ class FiltersToolbar extends StatelessWidget {
                   child: Switch(
                     value: filters['inStock'] == true,
                     onChanged: (value) {
-                      final newFilters = Map<String, dynamic>.from(filters);
+                      final newFilters =
+                          Map<String, dynamic>.from(filters);
                       newFilters['inStock'] = value;
                       onChanged(newFilters);
                     },
                     activeTrackColor: AppColors.primary,
-                    activeThumbColor: Colors.white,
+                    activeThumbColor: Colors.black,
                     inactiveThumbColor: AppColors.textMuted,
-                    inactiveTrackColor: AppColors.background,
+                    inactiveTrackColor: AppColors.surface,
                   ),
                 ),
                 const Text(
-                  'Doar in stoc',
+                  'In stoc',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
@@ -176,15 +181,6 @@ class FiltersToolbar extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _separator() {
-    return Container(
-      width: 1,
-      height: 24,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      color: AppColors.borderColor,
     );
   }
 }
@@ -207,6 +203,7 @@ class _FilterChip extends StatelessWidget {
             color: AppColors.textMuted,
             fontSize: 11,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
           ),
         ),
         const SizedBox(height: 4),

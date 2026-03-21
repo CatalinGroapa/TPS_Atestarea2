@@ -16,11 +16,9 @@ class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Login fields
   final _loginEmailController = TextEditingController();
   final _loginPasswordController = TextEditingController();
 
-  // Register fields
   final _regNameController = TextEditingController();
   final _regEmailController = TextEditingController();
   final _regPasswordController = TextEditingController();
@@ -50,8 +48,12 @@ class _LoginScreenState extends State<LoginScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(text),
-        backgroundColor: isError ? AppColors.danger : AppColors.success,
+        content: Text(text,
+            style: TextStyle(
+                color: isError ? Colors.black : Colors.black)),
+        backgroundColor: isError
+            ? const Color(0xFF888888)
+            : AppColors.primary,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -154,36 +156,39 @@ class _LoginScreenState extends State<LoginScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
                 SvgPicture.asset(
                   'assets/images/logo.svg',
-                  height: 64,
+                  height: 48,
                   colorFilter: const ColorFilter.mode(
                     AppColors.primary,
                     BlendMode.srcIn,
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(
+                const Text(
                   'PulsePrice',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 28,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Conecteaza-te pentru a accesa compararea inteligenta de preturi.',
+                  'Comparare inteligenta de preturi',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 14),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 48),
 
                 // Tabs
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderColor),
                   ),
                   child: TabBar(
                     controller: _tabController,
@@ -192,7 +197,8 @@ class _LoginScreenState extends State<LoginScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     indicatorSize: TabBarIndicatorSize.tab,
-                    labelColor: Colors.white,
+                    labelColor: Colors.black,
+                    labelStyle: const TextStyle(fontWeight: FontWeight.w700),
                     unselectedLabelColor: AppColors.textSecondary,
                     dividerColor: Colors.transparent,
                     tabs: const [
@@ -201,9 +207,8 @@ class _LoginScreenState extends State<LoginScreen>
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Tab content
                 SizedBox(
                   height: _tabController.index == 1 ? 380 : 260,
                   child: TabBarView(
@@ -215,27 +220,39 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Google sign in
-                const Text(
-                  'Sau logheaza-te cu una din:',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                Row(
+                  children: [
+                    const Expanded(
+                        child: Divider(color: AppColors.borderColor)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'sau',
+                        style: TextStyle(
+                            color: AppColors.textMuted, fontSize: 13),
+                      ),
+                    ),
+                    const Expanded(
+                        child: Divider(color: AppColors.borderColor)),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _loading ? null : _handleGoogleSignIn,
                     icon: Image.asset(
                       'assets/images/Google__G__logo.svg.png',
-                      height: 20,
-                      width: 20,
+                      height: 18,
+                      width: 18,
                     ),
-                    label: const Text('Google'),
+                    label: const Text('Continua cu Google'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textPrimary,
-                      side: const BorderSide(color: AppColors.borderColor),
+                      side:
+                          const BorderSide(color: AppColors.borderLight),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -245,8 +262,15 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
 
                 if (_loading) ...[
-                  const SizedBox(height: 24),
-                  const CircularProgressIndicator(color: AppColors.primary),
+                  const SizedBox(height: 32),
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 2,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -262,9 +286,12 @@ class _LoginScreenState extends State<LoginScreen>
         const Align(
           alignment: Alignment.centerLeft,
           child: Text('Email',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500)),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         TextField(
           controller: _loginEmailController,
           keyboardType: TextInputType.emailAddress,
@@ -277,9 +304,12 @@ class _LoginScreenState extends State<LoginScreen>
         const Align(
           alignment: Alignment.centerLeft,
           child: Text('Parola',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500)),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         TextField(
           controller: _loginPasswordController,
           obscureText: true,
@@ -289,7 +319,7 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           onSubmitted: (_) => _handleLogin(),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -308,9 +338,12 @@ class _LoginScreenState extends State<LoginScreen>
           const Align(
             alignment: Alignment.centerLeft,
             child: Text('Nume',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           TextField(
             controller: _regNameController,
             style: const TextStyle(color: AppColors.textPrimary),
@@ -322,9 +355,12 @@ class _LoginScreenState extends State<LoginScreen>
           const Align(
             alignment: Alignment.centerLeft,
             child: Text('Email',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           TextField(
             controller: _regEmailController,
             keyboardType: TextInputType.emailAddress,
@@ -337,9 +373,12 @@ class _LoginScreenState extends State<LoginScreen>
           const Align(
             alignment: Alignment.centerLeft,
             child: Text('Parola',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           TextField(
             controller: _regPasswordController,
             obscureText: true,
@@ -352,9 +391,12 @@ class _LoginScreenState extends State<LoginScreen>
           const Align(
             alignment: Alignment.centerLeft,
             child: Text('Confirma parola',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           TextField(
             controller: _regPasswordConfirmController,
             obscureText: true,
@@ -364,7 +406,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             onSubmitted: (_) => _handleRegister(),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(

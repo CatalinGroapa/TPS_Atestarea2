@@ -27,13 +27,6 @@ class ProductModal extends StatelessWidget {
     required this.onClose,
   });
 
-  static const Map<String, String> storeEmoji = {
-    'Darwin': '\u{1F98E}',
-    'Cactus': '\u{1F335}',
-    'Bomba': '\u{1F4A3}',
-    'PandaShop': '\u{1F43C}',
-  };
-
   static const Map<String, String> _scoreKeyTranslations = {
     'price': 'Pret',
     'rating': 'Rating',
@@ -41,21 +34,6 @@ class ProductModal extends StatelessWidget {
     'availability': 'Disponibil',
     'relevance': 'Relevanta',
   };
-
-  String _generateStars(double rating) {
-    final fullStars = rating.floor();
-    final hasHalf = (rating % 1) >= 0.5;
-    final empty = 5 - fullStars - (hasHalf ? 1 : 0);
-    return '\u2B50' * fullStars +
-        (hasHalf ? '\u2728' : '') +
-        '\u2606' * empty;
-  }
-
-  Color _scoreValueColor(int value) {
-    if (value >= 70) return AppColors.success;
-    if (value >= 50) return AppColors.warning;
-    return AppColors.danger;
-  }
 
   Future<void> _openUrl(String? url) async {
     if (url == null || url.isEmpty) return;
@@ -79,7 +57,7 @@ class ProductModal extends StatelessWidget {
         };
 
     return Material(
-      color: Colors.black54,
+      color: Colors.black87,
       child: SafeArea(
         child: Column(
           children: [
@@ -90,7 +68,8 @@ class ProductModal extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 child: IconButton(
                   onPressed: onClose,
-                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                  icon: const Icon(Icons.close,
+                      color: AppColors.textSecondary, size: 24),
                 ),
               ),
             ),
@@ -98,12 +77,12 @@ class ProductModal extends StatelessWidget {
             Expanded(
               child: Container(
                 decoration: const BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.background,
                   borderRadius:
                       BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -117,15 +96,21 @@ class ProductModal extends StatelessWidget {
                           fit: BoxFit.cover,
                           placeholder: (_, __) => Container(
                             height: 220,
-                            color: AppColors.background,
+                            color: AppColors.surface,
                             child: const Center(
-                              child: CircularProgressIndicator(
-                                  color: AppColors.primary),
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.textMuted,
+                                  strokeWidth: 1.5,
+                                ),
+                              ),
                             ),
                           ),
                           errorWidget: (_, __, ___) => Container(
                             height: 220,
-                            color: AppColors.background,
+                            color: AppColors.surface,
                             child: const Center(
                               child: Icon(Icons.image_not_supported,
                                   color: AppColors.textMuted, size: 48),
@@ -141,20 +126,26 @@ class ProductModal extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: AppColors.background,
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: AppColors.surface,
+                                    borderRadius:
+                                        BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: AppColors.borderColor),
                                   ),
                                   child: Text(
-                                    '${storeEmoji[product.store] ?? '\u{1F3EA}'} ${product.store}',
+                                    product.store.toUpperCase(),
                                     style: const TextStyle(
                                       color: AppColors.textSecondary,
-                                      fontSize: 14,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
                                     ),
                                   ),
                                 ),
@@ -164,8 +155,9 @@ class ProductModal extends StatelessWidget {
                                   style: const TextStyle(
                                     color: AppColors.textPrimary,
                                     fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.4,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.3,
+                                    letterSpacing: -0.3,
                                   ),
                                 ),
                               ],
@@ -175,25 +167,30 @@ class ProductModal extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.background,
+                              color: AppColors.surface,
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: AppColors.borderColor),
                             ),
                             child: Column(
                               children: [
                                 const Text(
-                                  'Scor AI',
+                                  'Scor',
                                   style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   '${product.recommendationScore ?? 0}',
                                   style: const TextStyle(
-                                    color: AppColors.success,
+                                    color: AppColors.textPrimary,
                                     fontSize: 32,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w700,
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures()
+                                    ],
                                   ),
                                 ),
                                 const Text(
@@ -216,9 +213,24 @@ class ProductModal extends StatelessWidget {
                         runSpacing: 8,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text(
-                            _generateStars(product.rating),
-                            style: const TextStyle(fontSize: 16),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(5, (i) {
+                              final rating = product.rating;
+                              if (i < rating.floor()) {
+                                return const Icon(Icons.star,
+                                    size: 16,
+                                    color: AppColors.primary);
+                              } else if (i < rating.ceil() &&
+                                  (rating % 1) >= 0.5) {
+                                return const Icon(Icons.star_half,
+                                    size: 16,
+                                    color: AppColors.primary);
+                              }
+                              return const Icon(Icons.star_border,
+                                  size: 16,
+                                  color: AppColors.textMuted);
+                            }),
                           ),
                           Text(
                             product.rating.toStringAsFixed(1),
@@ -227,9 +239,9 @@ class ProductModal extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const Text('\u2022',
-                              style:
-                                  TextStyle(color: AppColors.textMuted)),
+                          const Text('\u00B7',
+                              style: TextStyle(
+                                  color: AppColors.textMuted)),
                           Text(
                             '${product.reviewCount} recenzii',
                             style: const TextStyle(
@@ -240,16 +252,23 @@ class ProductModal extends StatelessWidget {
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: product.inStock
-                                  ? AppColors.success
-                                  : AppColors.danger,
+                                  ? AppColors.primary
+                                  : AppColors.surface,
                               borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: product.inStock
+                                    ? AppColors.primary
+                                    : AppColors.borderLight,
+                              ),
                             ),
                             child: Text(
                               product.inStock
-                                  ? '\u2713 In stoc'
-                                  : '\u2717 Indisponibil',
-                              style: const TextStyle(
-                                color: Colors.white,
+                                  ? 'In stoc'
+                                  : 'Indisponibil',
+                              style: TextStyle(
+                                color: product.inStock
+                                    ? Colors.black
+                                    : AppColors.textMuted,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -262,13 +281,13 @@ class ProductModal extends StatelessWidget {
                       // Description
                       if (product.description.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
+                          padding: const EdgeInsets.only(bottom: 24),
                           child: Text(
                             product.description,
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 14,
-                              height: 1.8,
+                              height: 1.7,
                             ),
                           ),
                         ),
@@ -279,45 +298,48 @@ class ProductModal extends StatelessWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.background,
+                            color: AppColors.surface,
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: AppColors.borderColor),
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
-                              const Row(
-                                children: [
-                                  Text('\u2699\uFE0F',
-                                      style: TextStyle(fontSize: 16)),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Specificatii Tehnice',
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
+                              const Text(
+                                'Specificatii Tehnice',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                               const SizedBox(height: 12),
                               ...product.specs.map((spec) => Padding(
-                                    padding:
-                                        const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.only(
+                                        bottom: 8),
                                     child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
-                                          '\u25AA',
-                                          style: TextStyle(
-                                              color: AppColors.primary),
+                                        const Padding(
+                                          padding: EdgeInsets.only(
+                                              top: 6),
+                                          child: Icon(
+                                            Icons.circle,
+                                            size: 4,
+                                            color: AppColors
+                                                .textMuted,
+                                          ),
                                         ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
                                             spec,
                                             style: const TextStyle(
-                                              color:
-                                                  AppColors.textSecondary,
+                                              color: AppColors
+                                                  .textSecondary,
                                               fontSize: 14,
                                             ),
                                           ),
@@ -328,7 +350,7 @@ class ProductModal extends StatelessWidget {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                       ],
 
                       // AI Analysis breakdown
@@ -336,47 +358,50 @@ class ProductModal extends StatelessWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: AppColors.borderColor),
                         ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
                           children: [
-                            const Row(
-                              children: [
-                                Text('\u{1F916}',
-                                    style: TextStyle(fontSize: 16)),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Analiza AI',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                            const Text(
+                              'Analiza AI',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             GridView.count(
                               crossAxisCount: 2,
                               shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
+                              physics:
+                                  const NeverScrollableScrollPhysics(),
                               crossAxisSpacing: 12,
                               mainAxisSpacing: 12,
                               childAspectRatio: 1.3,
                               children: scoreBreakdown.entries
-                                  .where((e) => e.key != 'sentiment')
+                                  .where(
+                                      (e) => e.key != 'sentiment')
                                   .map((entry) {
                                 final value =
-                                    (entry.value as num?)?.toInt() ?? 0;
-                                final color = _scoreValueColor(value);
+                                    (entry.value as num?)
+                                            ?.toInt() ??
+                                        0;
                                 return Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding:
+                                      const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: AppColors.surface,
+                                    color: AppColors.background,
                                     borderRadius:
                                         BorderRadius.circular(10),
+                                    border: Border.all(
+                                        color: AppColors
+                                            .borderColor),
                                   ),
                                   child: Column(
                                     mainAxisAlignment:
@@ -387,32 +412,42 @@ class ProductModal extends StatelessWidget {
                                                 entry.key] ??
                                             entry.key,
                                         style: const TextStyle(
-                                          color:
-                                              AppColors.textSecondary,
+                                          color: AppColors
+                                              .textMuted,
                                           fontSize: 12,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         '$value%',
-                                        style: TextStyle(
-                                          color: color,
+                                        style: const TextStyle(
+                                          color: AppColors
+                                              .textPrimary,
                                           fontSize: 24,
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight:
+                                              FontWeight.w700,
+                                          fontFeatures: [
+                                            FontFeature
+                                                .tabularFigures()
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(height: 6),
                                       ClipRRect(
                                         borderRadius:
-                                            BorderRadius.circular(3),
-                                        child: LinearProgressIndicator(
+                                            BorderRadius.circular(
+                                                2),
+                                        child:
+                                            LinearProgressIndicator(
                                           value: value / 100,
                                           backgroundColor:
-                                              AppColors.background,
+                                              AppColors
+                                                  .borderColor,
                                           valueColor:
-                                              AlwaysStoppedAnimation(
-                                                  color),
-                                          minHeight: 6,
+                                              const AlwaysStoppedAnimation(
+                                                  AppColors
+                                                      .primary),
+                                          minHeight: 3,
                                         ),
                                       ),
                                     ],
@@ -423,24 +458,17 @@ class ProductModal extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Similar products
                       if (similar.isNotEmpty) ...[
-                        const Row(
-                          children: [
-                            Text('\u{1F517}',
-                                style: TextStyle(fontSize: 16)),
-                            SizedBox(width: 8),
-                            Text(
-                              'Produse Similare',
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        const Text(
+                          'Produse Similare',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
@@ -454,15 +482,17 @@ class ProductModal extends StatelessWidget {
                                 onTap: () => onSimilarClick(p),
                                 child: Container(
                                   width: 160,
-                                  margin:
-                                      const EdgeInsets.only(right: 12),
-                                  padding: const EdgeInsets.all(10),
+                                  margin: const EdgeInsets.only(
+                                      right: 12),
+                                  padding:
+                                      const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppColors.background,
+                                    color: AppColors.surface,
                                     borderRadius:
-                                        BorderRadius.circular(10),
+                                        BorderRadius.circular(12),
                                     border: Border.all(
-                                        color: AppColors.borderColor),
+                                        color: AppColors
+                                            .borderColor),
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
@@ -470,8 +500,10 @@ class ProductModal extends StatelessWidget {
                                     children: [
                                       ClipRRect(
                                         borderRadius:
-                                            BorderRadius.circular(8),
-                                        child: CachedNetworkImage(
+                                            BorderRadius.circular(
+                                                8),
+                                        child:
+                                            CachedNetworkImage(
                                           imageUrl: p.image,
                                           height: 80,
                                           width: double.infinity,
@@ -480,7 +512,8 @@ class ProductModal extends StatelessWidget {
                                               (_, __, ___) =>
                                                   Container(
                                             height: 80,
-                                            color: AppColors.surface,
+                                            color: AppColors
+                                                .background,
                                             child: const Icon(
                                                 Icons
                                                     .image_not_supported,
@@ -489,12 +522,16 @@ class ProductModal extends StatelessWidget {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 6),
+                                      const SizedBox(height: 8),
                                       Text(
-                                        '${storeEmoji[p.store] ?? '\u{1F3EA}'} ${p.store}',
+                                        p.store.toUpperCase(),
                                         style: const TextStyle(
-                                          color: AppColors.textMuted,
+                                          color:
+                                              AppColors.textMuted,
                                           fontSize: 10,
+                                          letterSpacing: 0.5,
+                                          fontWeight:
+                                              FontWeight.w600,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
@@ -502,36 +539,25 @@ class ProductModal extends StatelessWidget {
                                         child: Text(
                                           p.title,
                                           maxLines: 2,
-                                          overflow:
-                                              TextOverflow.ellipsis,
+                                          overflow: TextOverflow
+                                              .ellipsis,
                                           style: const TextStyle(
-                                            color:
-                                                AppColors.textPrimary,
+                                            color: AppColors
+                                                .textPrimary,
                                             fontSize: 12,
                                             height: 1.3,
                                           ),
                                         ),
                                       ),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment
-                                                .spaceBetween,
-                                        children: [
-                                          Text(
-                                            formatPrice(p.price),
-                                            style: const TextStyle(
-                                              color: AppColors.success,
-                                              fontSize: 13,
-                                              fontWeight:
-                                                  FontWeight.bold,
-                                            ),
-                                          ),
-                                          Text(
-                                            _generateStars(p.rating),
-                                            style: const TextStyle(
-                                                fontSize: 8),
-                                          ),
-                                        ],
+                                      Text(
+                                        formatPrice(p.price),
+                                        style: const TextStyle(
+                                          color: AppColors
+                                              .textPrimary,
+                                          fontSize: 14,
+                                          fontWeight:
+                                              FontWeight.w700,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -540,7 +566,7 @@ class ProductModal extends StatelessWidget {
                             },
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                       ],
 
                       // Price + open in store button
@@ -549,41 +575,56 @@ class ProductModal extends StatelessWidget {
                         decoration: const BoxDecoration(
                           border: Border(
                             top: BorderSide(
-                                color: AppColors.borderColor, width: 2),
+                                color: AppColors.borderColor),
                           ),
                         ),
                         child: Row(
                           children: [
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.all(16),
+                                padding:
+                                    const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: AppColors.background,
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppColors.surface,
+                                  borderRadius:
+                                      BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color:
+                                          AppColors.borderColor),
                                 ),
                                 child: Column(
                                   children: [
                                     const Text(
                                       'Pret',
                                       style: TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 13,
+                                        color: AppColors
+                                            .textMuted,
+                                        fontSize: 12,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      formatPrice(product.price),
+                                      formatPrice(product.price)
+                                          .replaceAll(
+                                              ' MDL', ''),
                                       style: const TextStyle(
-                                        color: AppColors.success,
+                                        color: AppColors
+                                            .textPrimary,
                                         fontSize: 24,
-                                        fontWeight: FontWeight.bold,
+                                        fontWeight:
+                                            FontWeight.w700,
+                                        fontFeatures: [
+                                          FontFeature
+                                              .tabularFigures()
+                                        ],
                                       ),
                                     ),
                                     const Text(
-                                      'Lei moldovenesti',
+                                      'MDL',
                                       style: TextStyle(
-                                        color: AppColors.textMuted,
-                                        fontSize: 11,
+                                        color: AppColors
+                                            .textSecondary,
+                                        fontSize: 12,
                                       ),
                                     ),
                                   ],
@@ -598,25 +639,24 @@ class ProductModal extends StatelessWidget {
                                         ? product.productUrl
                                         : product.storeUrl),
                                 child: Container(
-                                  padding: const EdgeInsets.all(16),
+                                  padding:
+                                      const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        AppColors.primary,
-                                        AppColors.secondary
-                                      ],
-                                    ),
+                                    color: AppColors.primary,
                                     borderRadius:
-                                        BorderRadius.circular(12),
+                                        BorderRadius.circular(
+                                            12),
                                   ),
                                   child: Center(
                                     child: Text(
-                                      '${storeEmoji[product.store] ?? '\u{1F3EA}'} Vezi in ${product.store} \u2192',
-                                      textAlign: TextAlign.center,
+                                      'Vezi in ${product.store}',
+                                      textAlign:
+                                          TextAlign.center,
                                       style: const TextStyle(
-                                        color: Colors.white,
+                                        color: Colors.black,
                                         fontSize: 15,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight:
+                                            FontWeight.w700,
                                       ),
                                     ),
                                   ),

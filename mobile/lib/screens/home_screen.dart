@@ -22,13 +22,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Engines
   late final NLPEngine _nlpEngine;
   late final RecommendationEngine _recommendationEngine;
   final ApiService _apiService = ApiService();
   final StorageService _storageService = StorageService();
 
-  // State
   String _query = '';
   List<Product> _products = [];
   List<Product> _scoredResults = [];
@@ -65,7 +63,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- Helpers ---
   String formatPrice(double price) {
     final safePrice = price.isFinite ? price : 0.0;
     final formatted = safePrice.toStringAsFixed(0).replaceAllMapped(
@@ -84,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
           : product.title,
       image: product.image.isNotEmpty
           ? product.image
-          : 'https://via.placeholder.com/400x300/1e293b/6366f1?text=Produs',
+          : 'https://via.placeholder.com/400x300/111111/ffffff?text=Produs',
     );
   }
 
@@ -119,7 +116,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return _wishlist.any((item) => item.id == productId);
   }
 
-  // --- Apply filters ---
   void _applyFiltersAndDisplay(
       List<Product> prods, String q, Map<String, dynamic> filt) {
     final parsedFilters = <String, dynamic>{
@@ -145,15 +141,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // --- Search ---
   Future<void> _performSearch(String? overrideQuery) async {
     final q = (overrideQuery ?? _query).trim();
     if (q.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Te rog introdu un termen de cautare'),
-            backgroundColor: AppColors.warning,
+          SnackBar(
+            content: const Text('Introdu un termen de cautare',
+                style: TextStyle(color: Colors.black)),
+            backgroundColor: AppColors.primary,
           ),
         );
       }
@@ -170,7 +166,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // Interpret query with AI
       final interpretation = await _apiService.interpretQuery(q);
       final searchTerms = (interpretation['searchTerms'] as List<dynamic>?)
               ?.map((e) => e.toString())
@@ -183,7 +178,6 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
 
-      // Search products
       final rawProducts = await _apiService.searchProducts(
           searchTerms.isNotEmpty ? searchTerms[0] : q);
 
@@ -205,7 +199,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _products = normalizedProducts;
       });
 
-      // Small delay for AI processing effect
       await Future.delayed(const Duration(milliseconds: 800));
 
       _applyFiltersAndDisplay(normalizedProducts, q, _filters);
@@ -217,7 +210,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- Auth ---
   Future<void> _handleLogout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -227,7 +219,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- Wishlist handlers ---
   void _handleRemoveFromWishlist(WishlistItem item) {
     setState(() {
       _wishlist.removeWhere((w) => w.id == item.id);
@@ -246,66 +237,68 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final resultsCountText = _scoredResults.isNotEmpty
-        ? '${_scoredResults.length} produse gasite in ${_scoredResults.map((p) => p.store).toSet().length} magazine'
+        ? '${_scoredResults.length} produse in ${_scoredResults.map((p) => p.store).toSet().length} magazine'
         : '';
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        title: Row(
-          children: [
-            const Text(
-              'PulsePrice',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Store badges
-            ..._buildStoreBadges(),
-          ],
+        backgroundColor: AppColors.background,
+        title: const Text(
+          'PulsePrice',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.5,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: AppColors.borderColor,
+          ),
         ),
         actions: [
-          // User name
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Center(
               child: Text(
                 widget.user.displayName ?? 'User',
                 style: const TextStyle(
-                  color: AppColors.textSecondary,
+                  color: AppColors.textMuted,
                   fontSize: 13,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
-          // Wishlist button with badge
+          // Wishlist button
           Stack(
             children: [
               IconButton(
                 onPressed: () => setState(() => _showWishlist = true),
-                icon: const Icon(Icons.favorite, color: AppColors.danger),
-                tooltip: 'Lista de favorite',
+                icon: const Icon(Icons.favorite_border,
+                    color: AppColors.textSecondary, size: 22),
+                tooltip: 'Favorite',
               ),
               if (_wishlist.isNotEmpty)
                 Positioned(
-                  right: 4,
-                  top: 4,
+                  right: 6,
+                  top: 6,
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
-                      color: AppColors.danger,
+                      color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),
                     child: Text(
                       '${_wishlist.length}',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -315,7 +308,8 @@ class _HomeScreenState extends State<HomeScreen> {
           // Logout
           IconButton(
             onPressed: _handleLogout,
-            icon: const Icon(Icons.logout, color: AppColors.textSecondary),
+            icon: const Icon(Icons.logout,
+                color: AppColors.textMuted, size: 20),
             tooltip: 'Deconectare',
           ),
         ],
@@ -346,20 +340,22 @@ class _HomeScreenState extends State<HomeScreen> {
               if (_aiInsight != null && !_loading)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                        border:
+                            Border.all(color: AppColors.borderColor),
                       ),
                       child: Row(
                         children: [
-                          const Text('🤖',
-                              style: TextStyle(fontSize: 18)),
+                          const Icon(Icons.auto_awesome,
+                              size: 16,
+                              color: AppColors.textMuted),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -384,7 +380,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     onChanged: (newFilters) {
                       setState(() => _filters = newFilters);
                       if (_products.isNotEmpty && _query.isNotEmpty) {
-                        _applyFiltersAndDisplay(_products, _query, newFilters);
+                        _applyFiltersAndDisplay(
+                            _products, _query, newFilters);
                       }
                     },
                     resultsCount: resultsCountText,
@@ -401,17 +398,17 @@ class _HomeScreenState extends State<HomeScreen> {
               if (!_loading && _scoredResults.isNotEmpty) ...[
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Recomandari',
+                          'Rezultate',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
@@ -426,20 +423,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       childAspectRatio: 0.52,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final product = _scoredResults[index];
-                        final reasons =
-                            _recommendationEngine.generateExplanation(product);
+                        final reasons = _recommendationEngine
+                            .generateExplanation(product);
                         return ProductCard(
                           product: product,
                           rank: index + 1,
@@ -447,16 +444,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           reasons: reasons,
                           formatPrice: formatPrice,
                           onDetailsClick: () {
-                            setState(() => _selectedProduct = product);
+                            setState(
+                                () => _selectedProduct = product);
                           },
-                          onWishlistToggle: () => _toggleWishlist(product),
+                          onWishlistToggle: () =>
+                              _toggleWishlist(product),
                         );
                       },
                       childCount: _scoredResults.length,
                     ),
                   ),
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                const SliverToBoxAdapter(
+                    child: SizedBox(height: 32)),
               ],
 
               // Empty states
@@ -490,11 +490,13 @@ class _HomeScreenState extends State<HomeScreen> {
               recommendationEngine: _recommendationEngine,
               formatPrice: formatPrice,
               wishlist: _wishlist,
-              onWishlistToggle: () => _toggleWishlist(_selectedProduct!),
+              onWishlistToggle: () =>
+                  _toggleWishlist(_selectedProduct!),
               onSimilarClick: (product) {
                 setState(() => _selectedProduct = product);
               },
-              onClose: () => setState(() => _selectedProduct = null),
+              onClose: () =>
+                  setState(() => _selectedProduct = null),
             ),
 
           // Wishlist modal
@@ -502,31 +504,14 @@ class _HomeScreenState extends State<HomeScreen> {
             WishlistModal(
               wishlist: _wishlist,
               formatPrice: formatPrice,
-              onClose: () => setState(() => _showWishlist = false),
+              onClose: () =>
+                  setState(() => _showWishlist = false),
               onRemove: _handleRemoveFromWishlist,
               onClearAll: _handleClearWishlist,
             ),
         ],
       ),
     );
-  }
-
-  List<Widget> _buildStoreBadges() {
-    const stores = [
-      {'name': 'Darwin', 'emoji': '\u{1F98E}'},
-      {'name': 'Cactus', 'emoji': '\u{1F335}'},
-      {'name': 'Bomba', 'emoji': '\u{1F4A3}'},
-      {'name': 'Panda', 'emoji': '\u{1F43C}'},
-    ];
-    return stores
-        .map((store) => Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Text(
-                store['emoji']!,
-                style: const TextStyle(fontSize: 14),
-              ),
-            ))
-        .toList();
   }
 }
 
@@ -541,24 +526,29 @@ class _LoadingState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: AppColors.primary),
+          const SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 2,
+            ),
+          ),
           const SizedBox(height: 24),
           const Text(
-            'Analizez produsele cu AI...',
+            'Se cauta...',
             style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+              fontSize: 16,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Caut in Darwin \u{1F98E}, Cactus \u{1F335}, Bomba \u{1F4A3} si PandaShop \u{1F43C}',
+            'Darwin \u00B7 Cactus \u00B7 Bomba \u00B7 PandaShop',
             style: TextStyle(
               color: AppColors.textMuted,
-              fontSize: 14,
+              fontSize: 13,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -575,17 +565,20 @@ class _WelcomeState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search, size: 64, color: AppColors.textMuted),
+          Icon(Icons.search, size: 48, color: AppColors.textMuted),
           const SizedBox(height: 16),
           const Text(
-            'Cautam produsele in Darwin, Cactus, Bomba si PandaShop',
+            'Cauta produse in 4 magazine',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 16,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Preturi in Lei MDL \u{2022} Analiza AI \u{2022} Comparare automata',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+            'Preturi MDL \u00B7 Analiza AI \u00B7 Comparare automata',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
           ),
         ],
       ),
@@ -604,26 +597,34 @@ class _NoResultsState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.info_outline, size: 64, color: AppColors.textMuted),
+          Icon(Icons.search_off, size: 48, color: AppColors.textMuted),
           const SizedBox(height: 16),
           Text(
-            'Nu am gasit rezultate pentru "$query"',
+            'Niciun rezultat pentru "$query"',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Incearca sa modifici termenii de cautare sau filtrele',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            'Modifica termenii sau filtrele',
+            style:
+                TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
+          const SizedBox(height: 24),
+          OutlinedButton(
             onPressed: onReset,
-            child: const Text('Intoarce-te la inceput'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textPrimary,
+              side: const BorderSide(color: AppColors.borderLight),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Inapoi'),
           ),
         ],
       ),
@@ -640,20 +641,21 @@ class _ErrorState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: AppColors.danger),
+          Icon(Icons.error_outline, size: 48, color: AppColors.textMuted),
           const SizedBox(height: 16),
           const Text(
-            'Oops! A aparut o eroare',
+            'A aparut o eroare',
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Te rog incearca din nou intr-un moment',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            'Incearca din nou',
+            style:
+                TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ],
       ),

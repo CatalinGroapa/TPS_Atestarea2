@@ -37,7 +37,6 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
         setState(() => _showDropdown = true);
       }
       if (!_focusNode.hasFocus) {
-        // Delay to allow tap events on dropdown items
         Future.delayed(const Duration(milliseconds: 200), () {
           if (mounted) setState(() => _showDropdown = false);
         });
@@ -79,52 +78,40 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   }
 
   static const _quickSearchPills = [
-    {'label': '\u{1F4BB} Laptop', 'term': 'laptop'},
-    {'label': '\u{1F4F1} iPhone', 'term': 'iPhone'},
-    {'label': '\u{1F4F1} Samsung', 'term': 'Samsung'},
-    {'label': '\u{1F4FA} Televizor', 'term': 'televizor'},
-    {'label': '\u{1F3A7} Casti', 'term': 'casti'},
-    {'label': '\u{1F4F1} Tableta', 'term': 'tableta'},
+    {'label': 'Laptop', 'term': 'laptop'},
+    {'label': 'iPhone', 'term': 'iPhone'},
+    {'label': 'Samsung', 'term': 'Samsung'},
+    {'label': 'Televizor', 'term': 'televizor'},
+    {'label': 'Casti', 'term': 'casti'},
+    {'label': 'Tableta', 'term': 'tableta'},
   ];
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [AppColors.surface, AppColors.background],
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
+      color: AppColors.background,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Inteligenta Artificiala \u{00B7} Preturi Moldova',
+            'Gaseste cel mai bun pret',
             style: TextStyle(
-              color: AppColors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1,
+              color: AppColors.textPrimary,
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -1,
+              height: 1.1,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Gaseste cel mai bun pret',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Comparam automat produsele din 4 magazine si iti oferim cele mai bune recomandari.',
+            'Comparam automat din 4 magazine pentru tine',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
           // Search input row
           Row(
@@ -135,21 +122,25 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                   focusNode: _focusNode,
                   style: const TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
-                    hintText: 'Cauta produs (ex: iPhone 15, laptop, televizor...)',
-                    prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                    hintText: 'Cauta produs...',
+                    prefixIcon: const Icon(Icons.search,
+                        color: AppColors.textMuted, size: 20),
                     filled: true,
-                    fillColor: AppColors.background,
+                    fillColor: AppColors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.borderColor),
+                      borderSide:
+                          const BorderSide(color: AppColors.borderLight),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.borderColor),
+                      borderSide:
+                          const BorderSide(color: AppColors.borderLight),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                      borderSide: const BorderSide(
+                          color: AppColors.primary, width: 1),
                     ),
                   ),
                   onChanged: widget.onQueryChanged,
@@ -168,20 +159,15 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 20, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Cauta', style: TextStyle(fontWeight: FontWeight.w600)),
-                    SizedBox(width: 4),
-                    Icon(Icons.arrow_forward, size: 16),
-                  ],
-                ),
+                child: const Text('Cauta',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -206,7 +192,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.access_time,
+                            const Icon(Icons.access_time,
                                 size: 14, color: AppColors.textMuted),
                             const SizedBox(width: 6),
                             const Text(
@@ -227,7 +213,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                           child: const Text(
                             'Sterge tot',
                             style: TextStyle(
-                              color: AppColors.danger,
+                              color: AppColors.textSecondary,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -249,8 +235,9 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                               horizontal: 12, vertical: 10),
                           child: Row(
                             children: [
-                              const Text('\u{1F50D}',
-                                  style: TextStyle(fontSize: 14)),
+                              const Icon(Icons.search,
+                                  size: 14,
+                                  color: AppColors.textMuted),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -277,7 +264,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
               ),
             ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           // Quick search pills
           Wrap(
@@ -302,9 +289,10 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.borderColor),
+                        border:
+                            Border.all(color: AppColors.borderLight),
                       ),
                       child: Text(
                         pill['label']!,
