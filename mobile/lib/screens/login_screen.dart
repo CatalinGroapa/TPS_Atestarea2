@@ -155,24 +155,27 @@ class _LoginScreenState extends State<LoginScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SvgPicture.asset(
-                  'assets/images/logo.svg',
-                  height: 48,
-                  colorFilter: const ColorFilter.mode(
-                    AppColors.primary,
-                    BlendMode.srcIn,
+                Transform.scale(
+                  scale: 3.5, // 👈 mărești cu 50%
+                  child: SvgPicture.asset(
+                    'assets/images/logo.svg',
+                    height: 48,
+                    colorFilter: const ColorFilter.mode(
+                      AppColors.primary,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'PulsePrice',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 28,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.5,
-                  ),
-                ),
+                // const SizedBox(height: 16),
+                // const Text(
+                //   'PriceRadar',
+                //   style: TextStyle(
+                //     fontWeight: FontWeight.w800,
+                //     fontSize: 28,
+                //     color: AppColors.textPrimary,
+                //     letterSpacing: -0.5,
+                //   ),
+                // ),
                 const SizedBox(height: 8),
                 const Text(
                   'Comparare inteligenta de preturi',
