@@ -142,6 +142,32 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  String _selectSearchTerm(String query, Map<String, dynamic> interpretation) {
+    final intent = interpretation['intent']?.toString().trim().toLowerCase();
+    final terms = (interpretation['searchTerms'] as List<dynamic>?)
+            ?.map((term) => term.toString().trim())
+            .where((term) => term.isNotEmpty)
+            .toList() ??
+        [];
+
+    if (intent == null || intent == 'product_search' || terms.isEmpty) {
+      return query;
+    }
+
+    final queryTokens = query
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((token) => token.length >= 3)
+        .toList();
+    final selectedTerm = terms.first;
+    final selectedLower = selectedTerm.toLowerCase();
+    final preservedSignals = queryTokens
+        .where((token) => selectedLower.contains(token))
+        .length;
+
+    return preservedSignals >= 2 ? selectedTerm : query;
+  }
+
   Future<void> _performSearch(String? overrideQuery) async {
     final q = (overrideQuery ?? _query).trim();
     if (q.isEmpty) {
@@ -166,10 +192,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final interpretation = await _apiService.interpretQuery(q);
-      final searchTerms = (interpretation['searchTerms'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [q];
 
       if (interpretation['fallback'] != true) {
         setState(() {
@@ -177,8 +199,10 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
 
-      final rawProducts = await _apiService.searchProducts(
-          searchTerms.isNotEmpty ? searchTerms[0] : q);
+      final selectedSearchTerm = _selectSearchTerm(q, interpretation);
+      final scrapedProducts = await _apiService.searchProducts(selectedSearchTerm);
+      final rawProducts =
+          await _apiService.filterProductsWithAi(q, scrapedProducts);
 
       final normalizedProducts = rawProducts
           .asMap()

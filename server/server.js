@@ -2,6 +2,30 @@ const express = require('express');
 const puppeteer = require('puppeteer');
 const cors = require('cors');
 const NodeCache = require('node-cache');
+const fs = require('fs');
+const path = require('path');
+
+function loadLocalEnv() {
+    const envPath = path.join(__dirname, '.env');
+    if (!fs.existsSync(envPath)) return;
+
+    const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+    lines.forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) return;
+
+        const separatorIndex = trimmed.indexOf('=');
+        if (separatorIndex === -1) return;
+
+        const key = trimmed.slice(0, separatorIndex).trim();
+        const value = trimmed.slice(separatorIndex + 1).trim().replace(/^["']|["']$/g, '');
+        if (key && process.env[key] === undefined) {
+            process.env[key] = value;
+        }
+    });
+}
+
+loadLocalEnv();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -235,6 +259,105 @@ async function aiFilterProducts(query, products) {
 
     const filtered = candidateProducts.filter((p) => relevantIds.has(p.id));
     console.log(`🤖 Ollama filtru: ${products.length} → ${candidateProducts.length} → ${filtered.length} produse relevante`);
+    return filtered.length > 0 ? filtered : candidateProducts;
+}
+
+async function filterProductsWithGemini(query, products) {
+    if (!Array.isArray(products) || products.length === 0) return products;
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const heuristicFiltered = products.filter((product) => !isLikelyAccessory(query, product.title));
+    const candidateProducts = heuristicFiltered.length > 0 ? heuristicFiltered : products;
+
+    if (!apiKey) {
+        console.warn('⚠️ GEMINI_API_KEY missing, using heuristic filter only');
+        return candidateProducts;
+    }
+
+    const BATCH_SIZE = 60;
+    const relevantIds = new Set();
+
+    for (let i = 0; i < candidateProducts.length; i += BATCH_SIZE) {
+        const batch = candidateProducts.slice(i, i + BATCH_SIZE);
+        const candidates = batch.map((product) => ({
+            id: product.id,
+            title: product.title,
+            store: product.store,
+            price: product.price
+        }));
+
+        const prompt =
+            'You are filtering ecommerce search results for a price comparison app.\n' +
+            `User query: "${query}"\n\n` +
+            'Return ONLY valid JSON with this exact shape: {"relevant":["id1","id2"]}.\n' +
+            'Keep products that are the actual searched product or very close variants.\n' +
+            'Exclude accessories and peripheral items, including cases, covers, protective glass, screen protectors, chargers, cables, adapters, holders, stands, straps, skins, lens protectors, and similar add-ons.\n' +
+            'For phone searches, keep actual phones even if storage/color differs. Do not keep products whose title says case, husa, husă, чехол, стекло, sticla, glass, protector, cable, charger, adapter.\n\n' +
+            `Products:\n${JSON.stringify(candidates)}`;
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+                {
+                    method: 'POST',
+                    signal: controller.signal,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': apiKey
+                    },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                role: 'user',
+                                parts: [{ text: prompt }]
+                            }
+                        ],
+                        generationConfig: {
+                            temperature: 0,
+                            responseMimeType: 'application/json'
+                        }
+                    })
+                }
+            );
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                console.warn(`⚠️ Gemini batch ${i}-${i + BATCH_SIZE} skipped: HTTP ${response.status}`);
+                batch.forEach((product) => relevantIds.add(product.id));
+                continue;
+            }
+
+            const payload = await response.json();
+            const content = payload?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const jsonText = extractFirstJsonObject(content);
+            if (!jsonText) {
+                console.warn('⚠️ Gemini did not return valid JSON, keeping batch');
+                batch.forEach((product) => relevantIds.add(product.id));
+                continue;
+            }
+
+            const parsed = JSON.parse(jsonText);
+            const batchRelevant = Array.isArray(parsed?.relevant) ? parsed.relevant : [];
+            batchRelevant.forEach((id) => relevantIds.add(String(id)));
+        } catch (error) {
+            console.warn(`⚠️ Gemini batch ${i} error: ${error.message}, keeping batch`);
+            batch.forEach((product) => relevantIds.add(product.id));
+        }
+    }
+
+    const filtered = candidateProducts.filter((product) => relevantIds.has(product.id));
+    const minimumUsefulResults = Math.min(12, Math.ceil(candidateProducts.length * 0.2));
+
+    if (filtered.length < minimumUsefulResults && candidateProducts.length > minimumUsefulResults) {
+        console.warn(`⚠️ Gemini filter too aggressive (${candidateProducts.length} → ${filtered.length}), using heuristic output`);
+        return candidateProducts;
+    }
+
+    console.log(`🤖 Gemini filter: ${products.length} → ${candidateProducts.length} → ${filtered.length}`);
     return filtered.length > 0 ? filtered : candidateProducts;
 }
 
@@ -510,6 +633,27 @@ app.post('/interpret-query', async (req, res) => {
 
     const interpretation = await interpretQueryWithAi(query);
     res.json(interpretation);
+});
+
+app.post('/filter-products', async (req, res) => {
+    const query = String(req.body?.query || '').trim();
+    const products = Array.isArray(req.body?.products) ? req.body.products : [];
+
+    if (!query) {
+        return res.status(400).json({ error: 'Body field "query" is required' });
+    }
+
+    if (products.length === 0) {
+        return res.json([]);
+    }
+
+    try {
+        const filteredProducts = await filterProductsWithGemini(query, products);
+        res.json(filteredProducts);
+    } catch (error) {
+        console.error('Gemini filter endpoint error:', error.message);
+        res.json(products.filter((product) => !isLikelyAccessory(query, product.title)));
+    }
 });
 
 app.get('/search', async (req, res) => {

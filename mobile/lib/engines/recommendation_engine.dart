@@ -103,9 +103,20 @@ class RecommendationEngine {
     return matches.map((m) => int.parse(m.group(0)!)).toList();
   }
 
-  List<String> extractQueryTokens(String? text) {
+  String normalizeText(String? text) {
     return (text ?? '')
         .toLowerCase()
+        .replaceAll('\u0103', 'a')
+        .replaceAll('\u00e2', 'a')
+        .replaceAll('\u00ee', 'i')
+        .replaceAll('\u0219', 's')
+        .replaceAll('\u015f', 's')
+        .replaceAll('\u021b', 't')
+        .replaceAll('\u0163', 't');
+  }
+
+  List<String> extractQueryTokens(String? text) {
+    return normalizeText(text)
         .replaceAll(RegExp(r'[^\p{L}\p{N}\s-]+', unicode: true), ' ')
         .split(RegExp(r'\s+'))
         .map((token) => token.trim())
@@ -123,7 +134,7 @@ class RecommendationEngine {
   }
 
   String compactText(String? text) {
-    return (text ?? '').toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return normalizeText(text).replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
   bool titleContainsModelCode(String productTitle, String modelCode) {
@@ -133,11 +144,11 @@ class RecommendationEngine {
   }
 
   Set<String> detectQueryCategories(String? searchQuery) {
-    final query = (searchQuery ?? '').toLowerCase();
+    final query = normalizeText(searchQuery);
     final detected = <String>{};
 
     for (final entry in categoryKeywords.entries) {
-      if (entry.value.any((keyword) => query.contains(keyword))) {
+      if (entry.value.any((keyword) => query.contains(normalizeText(keyword)))) {
         detected.add(entry.key);
       }
     }
@@ -155,11 +166,11 @@ class RecommendationEngine {
   }
 
   Set<String> productCategoriesFromTitle(String? productTitle) {
-    final title = (productTitle ?? '').toLowerCase();
+    final title = normalizeText(productTitle);
     final categories = <String>{};
 
     for (final entry in categoryKeywords.entries) {
-      if (entry.value.any((keyword) => title.contains(keyword))) {
+      if (entry.value.any((keyword) => title.contains(normalizeText(keyword)))) {
         categories.add(entry.key);
       }
     }
@@ -179,22 +190,33 @@ class RecommendationEngine {
 
   bool isAccessory(String? productTitle) {
     const accessoryKeywords = [
-      'husa', 'huse', 'case',
-      'folie', 'folii', 'sticla', 'protectie', 'glass',
+      'husa', 'husă', 'huse', 'case', 'cover', 'bumper', 'toc',
+      'carcasa', 'carcasă', 'wallet', 'folio',
+      'folie', 'folii', 'sticla', 'sticlă', 'protectie', 'protecție', 'glass',
+      'tempered glass', 'screen protector', 'privacy glass', 'protector',
       'cablu', 'cabluri', 'cable', 'incarcator', 'charger',
-      'adaptor', 'adapter',
-      'casti', 'headphones', 'earphones', 'airpods',
-      'suport', 'holder', 'stand',
+      'încărcător', 'adaptor', 'adapter',
+      'casti', 'căști', 'headphones', 'earphones', 'earbuds', 'airpods',
+      'suport', 'holder', 'stand', 'mount', 'dock',
       'baterie externa', 'powerbank', 'power bank',
-      'stylus', 'pen',
+      'stylus', 'pen', 'lens protector',
       'card memorie', 'sd card', 'micro sd',
       'sim card',
       'cleaner', 'curatare',
-      'chehol', 'steklo', 'zaryadnoe'
+      'chehol', 'чехол', 'чехлы', 'steklo', 'стекло', 'защитное стекло',
+      'zaryadnoe', 'зарядное', 'кабель', 'адаптер', 'держатель'
     ];
 
-    final lowerTitle = (productTitle ?? '').toLowerCase();
-    return accessoryKeywords.any((keyword) => lowerTitle.contains(keyword));
+    final lowerTitle = normalizeText(productTitle);
+    final compactTitle = lowerTitle.replaceAll(RegExp(r'[\s\-_.,/\\]+'), '');
+
+    return accessoryKeywords.any((keyword) {
+      final normalizedKeyword = normalizeText(keyword);
+      final compactKeyword =
+          normalizedKeyword.replaceAll(RegExp(r'[\s\-_.,/\\]+'), '');
+      return lowerTitle.contains(normalizedKeyword) ||
+          compactTitle.contains(compactKeyword);
+    });
   }
 
   bool matchesModelNumber(String? productTitle, String? searchQuery) {
@@ -214,7 +236,7 @@ class RecommendationEngine {
   }
 
   bool isRelevantToQuery(String? productTitle, String? searchQuery) {
-    final title = (productTitle ?? '').toLowerCase();
+    final title = normalizeText(productTitle);
     final queryTokens = extractQueryTokens(searchQuery);
 
     if (queryTokens.isEmpty) return true;
@@ -249,7 +271,7 @@ class RecommendationEngine {
 
     int requiredMatches;
     if (textTokens.length > 1) {
-      requiredMatches = max(2, (textTokens.length * 0.6).floor());
+      requiredMatches = max(2, (textTokens.length * 0.75).ceil());
     } else if (textTokens.length == 1) {
       requiredMatches = 1;
     } else {
@@ -258,6 +280,16 @@ class RecommendationEngine {
 
     if (matchedCount < requiredMatches) {
       return false;
+    }
+
+    final queryContainsBrandOrModel =
+        textTokens.length >= 3 || numberTokens.isNotEmpty;
+    if (queryContainsBrandOrModel && textTokens.isNotEmpty) {
+      final missingImportantTokens =
+          textTokens.where((token) => !title.contains(token)).length;
+      if (missingImportantTokens > max(1, (textTokens.length * 0.35).floor())) {
+        return false;
+      }
     }
 
     const storageSizes = {'32', '64', '128', '256', '512', '1024', '2048'};
@@ -274,6 +306,11 @@ class RecommendationEngine {
 
     return true;
   }
+
+  Set<String> get stopWords => {
+        'de', 'cu', 'si', 'și', 'sau', 'pentru', 'la', 'din', 'pe', 'in',
+        'în', 'the', 'and', 'for', 'pro', 'max', 'mini', 'plus'
+      };
 
   bool passesBasicFilters(Product product, Map<String, dynamic> filters) {
     final maxPrice = filters['maxPrice'];
@@ -295,7 +332,7 @@ class RecommendationEngine {
   }
 
   bool isRelaxedRelevant(String? productTitle, String? searchQuery) {
-    final title = (productTitle ?? '').toLowerCase();
+    final title = normalizeText(productTitle);
     final tokens = extractQueryTokens(searchQuery);
     if (tokens.isEmpty) return true;
 
@@ -304,27 +341,36 @@ class RecommendationEngine {
       return modelCodes.any((code) => titleContainsModelCode(title, code));
     }
 
-    final meaningfulTokens = tokens.where((token) => token.length >= 2).toList();
+    final meaningfulTokens = tokens
+        .where((token) => token.length >= 2)
+        .where((token) => !stopWords.contains(token))
+        .toList();
     if (meaningfulTokens.isEmpty) return true;
 
     final textTokens =
         meaningfulTokens.where((token) => !RegExp(r'^\d+$').hasMatch(token)).toList();
     if (textTokens.isNotEmpty) {
-      return textTokens.any((token) => title.contains(token));
+      final matchedTextTokens =
+          textTokens.where((token) => title.contains(token)).length;
+      final requiredTextMatches = textTokens.length >= 3 ? 2 : 1;
+      return matchedTextTokens >= requiredTextMatches;
     }
 
-    return meaningfulTokens.any((token) => title.contains(token));
+    return false;
   }
 
   List<Product> recommendProducts(
       List<Product> products, String searchQuery, Map<String, dynamic> filters) {
     if (products.isEmpty) return [];
+    final nonAccessoryProducts =
+        products.where((product) => !isAccessory(product.title)).toList();
+    final productsToRank =
+        nonAccessoryProducts.isNotEmpty ? nonAccessoryProducts : products;
 
     // Strict filtering
-    var strictFilteredProducts = products.where((product) {
+    var strictFilteredProducts = productsToRank.where((product) {
       if (!matchesQueryCategory(product.title, searchQuery)) return false;
       if (!isRelevantToQuery(product.title, searchQuery)) return false;
-      if (isAccessory(product.title)) return false;
       if (!matchesModelNumber(product.title, searchQuery)) return false;
       return passesBasicFilters(product, filters);
     }).toList();
@@ -333,9 +379,8 @@ class RecommendationEngine {
     if (strictFilteredProducts.isNotEmpty) {
       filteredProducts = strictFilteredProducts;
     } else {
-      filteredProducts = products.where((product) {
+      filteredProducts = productsToRank.where((product) {
         if (!matchesQueryCategory(product.title, searchQuery)) return false;
-        if (isAccessory(product.title)) return false;
         if (!isRelaxedRelevant(product.title, searchQuery)) return false;
         return passesBasicFilters(product, filters);
       }).toList();
@@ -345,7 +390,7 @@ class RecommendationEngine {
     if (filteredProducts.isEmpty) {
       final modelCodes = extractModelCodes(searchQuery);
       if (modelCodes.isNotEmpty) {
-        filteredProducts = products.where((product) {
+        filteredProducts = productsToRank.where((product) {
           if (!passesBasicFilters(product, filters)) return false;
           final title = product.title;
           return modelCodes.any((code) => titleContainsModelCode(title, code));

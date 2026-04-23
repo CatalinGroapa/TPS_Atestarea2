@@ -25,12 +25,12 @@ class ApiService {
     };
   }
 
-  /// GET /search?q=...&ai=1
+  /// GET /search?q=...
   Future<List<Product>> searchProducts(String query) async {
     try {
       final response = await http.get(
         Uri.parse(
-            '${ApiConfig.baseUrl}/search?q=${Uri.encodeComponent(query)}&ai=1'),
+            '${ApiConfig.baseUrl}/search?q=${Uri.encodeComponent(query)}'),
       ).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
@@ -43,5 +43,57 @@ class ApiService {
       // ignore - will return empty
     }
     return [];
+  }
+
+  /// POST /filter-products
+  Future<List<Product>> filterProductsWithAi(
+      String query, List<Product> products) async {
+    if (products.isEmpty) return products;
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}/filter-products'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'query': query,
+              'products': products.map(_productToJson).toList(),
+            }),
+          )
+          .timeout(const Duration(seconds: 40));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+        final filtered = data
+            .map((json) => Product.fromJson(json as Map<String, dynamic>))
+            .toList();
+
+        if (filtered.isNotEmpty) {
+          return filtered;
+        }
+      }
+    } catch (_) {
+      // The local recommendation engine still filters accessories as fallback.
+    }
+
+    return products;
+  }
+
+  Map<String, dynamic> _productToJson(Product product) {
+    return {
+      'id': product.id,
+      'title': product.title,
+      'description': product.description,
+      'store': product.store,
+      'storeUrl': product.storeUrl,
+      'productUrl': product.productUrl,
+      'image': product.image,
+      'price': product.price,
+      'rating': product.rating,
+      'reviewCount': product.reviewCount,
+      'inStock': product.inStock,
+      'reviews': product.reviews,
+      'specs': product.specs,
+    };
   }
 }
