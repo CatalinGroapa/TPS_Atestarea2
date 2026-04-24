@@ -43,6 +43,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "598518435359-tdvfjj4q4mq07h8teddfrpalttab8hdd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pulseprice.pulseprice",
+            "certificate_hash": "898f2609ae7f44c27c3d26302dfd167bc404ef53"
+          }
+        },
+        {
           "client_id": "598518435359-m4gf2o37passcemg48qttr198rul26bf.apps.googleusercontent.com",
           "client_type": 3
         }

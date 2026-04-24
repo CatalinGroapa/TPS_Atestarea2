@@ -45,7 +45,9 @@ const allowedImageHosts = new Set([
     'cdn.ultra.md',
     'pandashop.md',
     'www.pandashop.md',
-    'cdn.pandashop.md'
+    'cdn.pandashop.md',
+    'atehno.md',
+    'www.atehno.md'
 ]);
 
 function isAllowedImageHost(hostname) {
@@ -149,6 +151,10 @@ const categorySignalKeywords = {
     toothbrush: [
         'periuta de dinti', 'periuta electrica', 'sonicare', 'toothbrush',
         'electric toothbrush', 'Р·СѓР±РЅР°СЏ С‰РµС‚РєР°', 'С‰РµС‚РєР°'
+    ],
+    iron: [
+        'fier de calcat', 'fier de călcat', 'statie de calcat', 'statie de călcat',
+        'steam iron', 'clothes iron', 'утюг', 'паровой утюг', 'праска'
     ]
 };
 
@@ -160,7 +166,8 @@ const categorySearchTerms = {
     audio: 'casti',
     appliance: 'electrocasnice',
     grooming: 'masina de tuns',
-    toothbrush: 'periuta electrica'
+    toothbrush: 'periuta electrica',
+    iron: ['fier de calcat', 'iron', 'утюг']
 };
 
 const brandSignalKeywords = {
@@ -195,6 +202,17 @@ const accessorySignalKeywords = [
     'РєР°Р±РµР»СЊ', 'Р·Р°СЂСЏРґРЅРѕРµ', 'Р·Р°СЂСЏРґРєР°', 'Р°РґР°РїС‚РµСЂ', 'РґРµСЂР¶Р°С‚РµР»СЊ'
 ];
 
+const nonTargetCommodityKeywords = [
+    'vitamin', 'vitamine', 'supplement', 'supliment', 'capsule', 'tablete', 'pastile',
+    'nutrition', 'nutritie', 'protein', 'whey', 'creatine', 'preworkout', 'amino',
+    'shaker', 'balkan pharmaceuticals', 'gmp', 'iron c', 'iron chelate', 'resishi',
+    'lion s mane', 'mushroom', 'bottle', 'flask', 'medicine', 'medicament'
+];
+
+const electronicsLikeCategories = new Set([
+    'phone', 'laptop', 'tablet', 'tv', 'audio', 'appliance', 'grooming', 'toothbrush', 'iron'
+]);
+
 const stopWords = new Set([
     'si', 'И™i', 'de', 'la', 'in', 'Г®n', 'cu', 'pe', 'pentru', 'cel', 'cea',
     'mai', 'un', 'o', 'sau', 'dar', 'ca', 'cДѓ', 'este', 'sunt', 'foarte',
@@ -207,6 +225,7 @@ const genericQueryTokens = new Set([
     'telefonmobil', 'laptop', 'notebook', 'tablet', 'tableta', 'tv', 'televizor',
     'casti', 'headphones', 'earbuds', 'boxa', 'speaker', 'smart',
     'masina', 'aparat', 'tuns', 'periuta', 'dinti', 'toothbrush',
+    'fier', 'calcat', 'calcare', 'iron', 'statie', 'steam',
     'СЃРјР°СЂС‚С„РѕРЅ', 'С‚РµР»РµС„РѕРЅ', 'РјР°С€РёРЅРєР°', 'СЃС‚СЂРёР¶РєРё', 'С‰РµС‚РєР°'
 ]);
 
@@ -216,6 +235,21 @@ function extractQueryTokens(text) {
         .split(/\s+/)
         .map((token) => token.trim())
         .filter((token) => token.length >= 2);
+}
+
+function extractAnchorTokens(text) {
+    return extractQueryTokens(text).filter((token) =>
+        !stopWords.has(token) &&
+        !/^\d+$/.test(token) &&
+        !['lei', 'le', 'mdl', 'ron', 'eur', 'euro', 'sub', 'pana', 'maxim', 'maximum', 'buget'].includes(token)
+    );
+}
+
+function looksLikeNonTargetCommodity(title) {
+    const normalizedTitle = normalizeText(title);
+    return nonTargetCommodityKeywords.some((keyword) =>
+        normalizedTitle.includes(normalizeText(keyword))
+    );
 }
 
 function detectSignals(text, signalsMap) {
@@ -292,7 +326,13 @@ function buildSearchVariants(query, interpretation = {}) {
 
     const primaryBrand = brands[0] || '';
     const primaryCategory = categories[0] || '';
-    const categoryTerm = primaryCategory ? categorySearchTerms[primaryCategory] || primaryCategory : '';
+    const categoryTermsRaw = primaryCategory
+        ? (categorySearchTerms[primaryCategory] || primaryCategory)
+        : '';
+    const categoryTerms = Array.isArray(categoryTermsRaw)
+        ? categoryTermsRaw
+        : (categoryTermsRaw ? [categoryTermsRaw] : []);
+    const primaryCategoryTerm = categoryTerms[0] || '';
     const importantTerm = context.importantTokens.find((token) => !/^\d+$/.test(token)) || '';
     const cleanedFallback = cleanSearchTerm(query);
 
@@ -305,11 +345,19 @@ function buildSearchVariants(query, interpretation = {}) {
         variants.push(normalized);
     };
 
-    if (primaryBrand && categoryTerm) addVariant(`${categoryTerm} ${primaryBrand}`);
+    if (primaryBrand && categoryTerms.length > 0) {
+        for (const term of categoryTerms.slice(0, 3)) {
+            addVariant(`${term} ${primaryBrand}`);
+        }
+    }
     if (primaryBrand) addVariant(primaryBrand);
-    if (categoryTerm && !primaryBrand) addVariant(categoryTerm);
+    if (!primaryBrand && categoryTerms.length > 0) {
+        for (const term of categoryTerms.slice(0, 3)) {
+            addVariant(term);
+        }
+    }
     if (primaryBrand && importantTerm) addVariant(`${primaryBrand} ${importantTerm}`);
-    if (categoryTerm && importantTerm) addVariant(`${categoryTerm} ${importantTerm}`);
+    if (primaryCategoryTerm && importantTerm) addVariant(`${primaryCategoryTerm} ${importantTerm}`);
 
     for (const term of usefulTerms) {
         if (!genericQueryTokens.has(normalizeText(term))) addVariant(term);
@@ -325,9 +373,9 @@ function buildSearchVariants(query, interpretation = {}) {
     }
 
     if (variants.length === 0) {
-        if (categoryTerm && primaryBrand) addVariant(`${categoryTerm} ${primaryBrand}`);
+        if (primaryCategoryTerm && primaryBrand) addVariant(`${primaryCategoryTerm} ${primaryBrand}`);
         else if (primaryBrand) addVariant(primaryBrand);
-        else if (categoryTerm) addVariant(categoryTerm);
+        else if (primaryCategoryTerm) addVariant(primaryCategoryTerm);
         else addVariant(cleanedFallback);
     }
 
@@ -355,18 +403,34 @@ function scoreProductByContext(product, query, context) {
     const normalizedTitle = normalizeText(product?.title || '');
     if (!normalizedTitle) return -1000;
     if (isLikelyAccessory(query, product.title)) return -1000;
+    if (
+        context.categories.size > 0 &&
+        Array.from(context.categories).some((category) => electronicsLikeCategories.has(category)) &&
+        looksLikeNonTargetCommodity(product.title)
+    ) {
+        return -950;
+    }
 
     let score = 0;
+    let categoryMatched = false;
+    let brandMatched = context.brands.size === 0;
+
+    const anchorTokens = extractAnchorTokens(query);
+    const matchedAnchorTokens = anchorTokens.filter((token) =>
+        normalizedTitle.includes(token)
+    );
 
     if (context.brands.size > 0) {
-        if (!matchesContextBrand(product.title, context)) {
+        brandMatched = matchesContextBrand(product.title, context);
+        if (!brandMatched) {
             return -900;
         }
         score += 45;
     }
 
     if (context.categories.size > 0) {
-        if (!matchesContextCategory(product.title, context)) {
+        categoryMatched = matchesContextCategory(product.title, context);
+        if (!categoryMatched) {
             return -800;
         }
         score += 35;
@@ -376,12 +440,22 @@ function scoreProductByContext(product, query, context) {
         normalizedTitle.includes(token)
     );
     if (context.importantTokens.length > 0) {
-        if (matchedImportantTokens.length === 0 && context.brands.size === 0) {
+        if (matchedImportantTokens.length === 0 && context.brands.size === 0 && !categoryMatched) {
             return -700;
         }
         score += matchedImportantTokens.length * 15;
         score -= Math.max(0, context.importantTokens.length - matchedImportantTokens.length) * 4;
     }
+
+    // Guard general anti-zgomot: produsul trebuie sa atinga minim intentul query-ului
+    // prin brand/categorie sau macar un token anchor din cautare.
+    if (anchorTokens.length >= 2 && matchedAnchorTokens.length === 0 && !brandMatched && !categoryMatched) {
+        return -760;
+    }
+    if (anchorTokens.length >= 3 && matchedAnchorTokens.length === 0 && !categoryMatched) {
+        return -740;
+    }
+    score += Math.min(12, matchedAnchorTokens.length * 4);
 
     const matchedNumbers = context.numbers.filter((token) =>
         normalizedTitle.includes(token)
@@ -878,20 +952,41 @@ async function filterAndRankProducts(query, products, interpretation = {}) {
     const heuristicCandidates = scoredProducts.length > 0
         ? scoredProducts
         : dedupeProducts(products).map((product) => ({ product, heuristicScore: 0 }));
+
+    const maxPrice = Number(context.filters?.maxPrice || 0);
+    const requireInStock = context.filters?.inStock === true;
+
+    // Aplicam filtrele hard devreme, inainte de AI rerank/top-candidate trimming,
+    // ca sa nu pierdem produse corecte din alte magazine.
+    let prefilteredCandidates = heuristicCandidates;
+    if (maxPrice > 0) {
+        const withinBudgetEarly = prefilteredCandidates.filter(({ product }) =>
+            Number(product.price) <= maxPrice
+        );
+        if (withinBudgetEarly.length > 0) {
+            prefilteredCandidates = withinBudgetEarly;
+        }
+    }
+    if (requireInStock) {
+        const inStockEarly = prefilteredCandidates.filter(({ product }) => product.inStock);
+        if (inStockEarly.length > 0) {
+            prefilteredCandidates = inStockEarly;
+        }
+    }
+
     const filteredWithAi = await filterProductsWithGemini(
         query,
-        heuristicCandidates.map(({ product }) => product),
+        prefilteredCandidates.map(({ product }) => product),
         interpretation
     );
     const aiIds = new Set(filteredWithAi.map((product) => product.id));
 
-    let finalRanked = heuristicCandidates
+    let finalRanked = prefilteredCandidates
         .filter(({ product }) => aiIds.size === 0 || aiIds.has(product.id));
     if (finalRanked.length === 0) {
-        finalRanked = heuristicCandidates;
+        finalRanked = prefilteredCandidates;
     }
 
-    const maxPrice = Number(context.filters?.maxPrice || 0);
     if (maxPrice > 0) {
         const withinBudget = finalRanked.filter(({ product }) => Number(product.price) <= maxPrice);
         if (withinBudget.length > 0) {
@@ -952,7 +1047,19 @@ const storeConfigs = {
     bomba: {
         name: 'Bomba.md',
         icon: 'рџ’Ј',
-        searchUrl: (query) => `https://bomba.md/ru/poisk/?query=${encodeURIComponent(query)}`,
+        searchUrl: (query) => {
+            const normalized = normalizeText(query);
+            if (
+                normalized.includes('fier de calcat') ||
+                normalized.includes('fier calcat') ||
+                normalized.includes('iron') ||
+                normalized.includes('утюг')
+            ) {
+                // Bomba indexeaza mai complet aceasta categorie pe pagina RO decat in search.
+                return 'https://bomba.md/ro/category/fieruri-de-calcat-634112/';
+            }
+            return `https://bomba.md/ru/poisk/?query=${encodeURIComponent(query)}`;
+        },
         selectors: {
             productCard: '.product__item',
             title: 'a.name',
@@ -984,6 +1091,19 @@ const storeConfigs = {
             image: 'meta[itemprop="image"], picture source[srcset], img[itemprop="image"], img',
             link: 'a.card-title, a[href*="/product/"]',
             availability: 'link[itemprop="availability"]'
+        }
+    },
+    atehno: {
+        name: 'Atehno.md',
+        icon: 'AT',
+        searchUrl: (query) => `https://atehno.md/search/catalog?keywords=${encodeURIComponent(query)}`,
+        selectors: {
+            productCard: '#products article.product-item',
+            title: 'h3 a',
+            price: '.price ins .amount, .price .amount',
+            image: 'a.img-wr img',
+            link: 'h3 a, a.img-wr',
+            availability: '.product-available-label'
         }
     }
 };
@@ -1128,15 +1248,27 @@ async function scrapeStore(browser, storeName, query, config) {
                     const availabilityHref = availabilityEl
                         ? (availabilityEl.getAttribute('href') || '')
                         : '';
+                    const availabilityMeta = availabilityEl
+                        ? `${availabilityEl.getAttribute('class') || ''} ${availabilityEl.getAttribute('title') || ''} ${availabilityEl.textContent || ''}`.toLowerCase()
+                        : '';
                     const stockText = (card.textContent || '').toLowerCase();
                     const explicitOutOfStock =
                         availabilityHref.includes('OutOfStock') ||
+                        availabilityMeta.includes('outofstock') ||
+                        availabilityMeta.includes('item-only-order') ||
+                        availabilityMeta.includes('под заказ') ||
+                        availabilityMeta.includes('нет в наличии') ||
                         stockText.includes('indisponibil') ||
                         stockText.includes('stoc epuizat') ||
+                        stockText.includes('под заказ') ||
+                        stockText.includes('нет в наличии') ||
                         stockText.includes('out of stock');
-                    const inStock = availabilityHref
-                        ? availabilityHref.includes('InStock')
-                        : !explicitOutOfStock;
+                    const explicitInStock =
+                        availabilityHref.includes('InStock') ||
+                        availabilityMeta.includes('instock') ||
+                        availabilityMeta.includes('item-available') ||
+                        availabilityMeta.includes('в наличии');
+                    const inStock = explicitInStock ? true : !explicitOutOfStock;
 
                     results.push({
                         id: `${storeName}_${Date.now()}_${index}`,
