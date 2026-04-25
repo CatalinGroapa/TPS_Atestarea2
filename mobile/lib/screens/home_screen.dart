@@ -628,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               // Filters toolbar
-              if (_scoredResults.isNotEmpty || _loading)
+              if (_products.isNotEmpty || _scoredResults.isNotEmpty || _loading)
                 SliverToBoxAdapter(
                   child: FiltersToolbar(
                     filters: _filters,
@@ -761,7 +761,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Comparare rapida (beta): ${comparedProducts.length}/2',
+                        'Comparare: ${comparedProducts.length}/2',
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
@@ -1017,12 +1017,84 @@ class _QuickCompareModal extends StatelessWidget {
     }
 
     return _QuickCompareProductMeta(
-      deliveryLabel: deliveryLabel,
+      deliveryLabel: _compactDeliveryLabel(deliveryLabel),
       deliveryDays: deliveryDays,
       warrantyLabel: warrantyLabel,
       warrantyMonths: warrantyMonths,
       paymentMethods: paymentMethods,
     );
+  }
+
+  String _compactDeliveryLabel(String raw) {
+    final normalized = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (normalized.isEmpty || normalized.toLowerCase() == 'nedisponibil') {
+      return 'Nedisponibil';
+    }
+
+    List<String> parts = normalized
+        .split('|')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) {
+      parts = [normalized];
+    }
+
+    String compactPart(String part) {
+      final value = part;
+      final valueLower = value.toLowerCase();
+
+      final cityLabel = valueLower.contains('chisinau')
+          ? 'Chișinău'
+          : valueLower.contains('republica moldova') ||
+                  valueLower.contains('prin moldova')
+              ? 'Moldova'
+              : valueLower.contains('raion')
+                  ? 'Raion'
+                  : valueLower.contains('expres')
+                      ? 'Expres'
+                      : valueLower.contains('standard')
+                          ? 'Standard'
+                          : '';
+
+      final priceMatch = RegExp(r'(\d{2,5})\s*lei', caseSensitive: false)
+          .firstMatch(value);
+      final hasFree = RegExp(r'gratis|gratuit', caseSensitive: false).hasMatch(value);
+      final etaMatch = RegExp(r'(\d{1,2}\s*-\s*\d{1,2}\s*zile|\d{1,2}\s*zile|m[aâ]ine)',
+              caseSensitive: false)
+          .firstMatch(value);
+
+      final details = <String>[];
+      if (hasFree) {
+        details.add('gratis');
+      } else if (priceMatch != null) {
+        details.add('${priceMatch.group(1)} lei');
+      }
+      if (etaMatch != null) {
+        details.add(etaMatch.group(1)!.replaceAll(RegExp(r'\s+'), ' ').trim());
+      }
+
+      if (cityLabel.isNotEmpty && details.isNotEmpty) {
+        return '$cityLabel: ${details.join(', ')}';
+      }
+      if (cityLabel.isNotEmpty) {
+        return cityLabel;
+      }
+      if (details.isNotEmpty) {
+        return details.join(', ');
+      }
+
+      return value
+          .replaceAll(RegExp(r'Livrare în raza municipiului', caseSensitive: false), 'Chișinău')
+          .replaceAll(RegExp(r'Livrare în', caseSensitive: false), '')
+          .replaceAll(RegExp(r'Livrare', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+    }
+
+    final compacted = parts.map(compactPart).where((part) => part.isNotEmpty).toList();
+    if (compacted.isEmpty) return 'Nedisponibil';
+    return compacted.take(2).join(' | ');
   }
 
   Color _bestCellColor(bool best) {
@@ -1034,6 +1106,7 @@ class _QuickCompareModal extends StatelessWidget {
     required String label,
     required String leftValue,
     required String rightValue,
+    IconData? labelIcon,
     bool leftBest = false,
     bool rightBest = false,
   }) {
@@ -1043,13 +1116,23 @@ class _QuickCompareModal extends StatelessWidget {
         children: [
           SizedBox(
             width: 92,
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Row(
+              children: [
+                if (labelIcon != null) ...[
+                  Icon(labelIcon, size: 14, color: AppColors.textMuted),
+                  const SizedBox(width: 5),
+                ],
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
@@ -1199,7 +1282,7 @@ class _QuickCompareModal extends StatelessWidget {
                       children: [
                         const Expanded(
                           child: Text(
-                            'Comparare rapida (beta)',
+                            'Comparare',
                             style: TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 16,
@@ -1272,6 +1355,7 @@ class _QuickCompareModal extends StatelessWidget {
                     ),
                     _buildTableRow(
                       label: 'Livrare',
+                      labelIcon: Icons.local_shipping_outlined,
                       leftValue: leftMeta.deliveryLabel,
                       rightValue: rightMeta.deliveryLabel,
                       leftBest: leftDeliveryBest,

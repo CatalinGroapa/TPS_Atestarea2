@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../config/theme.dart';
 
-class FiltersToolbar extends StatelessWidget {
+class FiltersToolbar extends StatefulWidget {
   final Map<String, dynamic> filters;
   final ValueChanged<Map<String, dynamic>> onChanged;
   final String resultsCount;
@@ -12,6 +13,75 @@ class FiltersToolbar extends StatelessWidget {
     required this.onChanged,
     this.resultsCount = '',
   });
+
+  @override
+  State<FiltersToolbar> createState() => _FiltersToolbarState();
+}
+
+class _FiltersToolbarState extends State<FiltersToolbar> {
+  late final TextEditingController _minController;
+  late final TextEditingController _maxController;
+  late final FocusNode _minFocusNode;
+  late final FocusNode _maxFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _minController = TextEditingController(
+      text: _formatNumber(widget.filters['minPrice']),
+    );
+    _maxController = TextEditingController(
+      text: _formatNumber(widget.filters['maxPrice']),
+    );
+    _minFocusNode = FocusNode();
+    _maxFocusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant FiltersToolbar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (!_minFocusNode.hasFocus) {
+      final newText = _formatNumber(widget.filters['minPrice']);
+      if (_minController.text != newText) {
+        _minController.text = newText;
+      }
+    }
+
+    if (!_maxFocusNode.hasFocus) {
+      final newText = _formatNumber(widget.filters['maxPrice']);
+      if (_maxController.text != newText) {
+        _maxController.text = newText;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _minController.dispose();
+    _maxController.dispose();
+    _minFocusNode.dispose();
+    _maxFocusNode.dispose();
+    super.dispose();
+  }
+
+  String _formatNumber(dynamic value) {
+    if (value == null) return '';
+    if (value is num) return value.toInt().toString();
+    final parsed = double.tryParse(value.toString());
+    if (parsed == null) return '';
+    return parsed.toInt().toString();
+  }
+
+  void _emitFilterPrice({
+    required String key,
+    required String value,
+  }) {
+    final newFilters = Map<String, dynamic>.from(widget.filters);
+    final clean = value.trim();
+    newFilters[key] = clean.isNotEmpty ? double.tryParse(clean) : null;
+    widget.onChanged(newFilters);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +104,11 @@ class FiltersToolbar extends StatelessWidget {
                 width: 80,
                 height: 36,
                 child: TextField(
+                  controller: _minController,
+                  focusNode: _minFocusNode,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly
+                  ],
                   keyboardType: TextInputType.number,
                   style: const TextStyle(
                       color: AppColors.textPrimary, fontSize: 13),
@@ -62,10 +137,7 @@ class FiltersToolbar extends StatelessWidget {
                     ),
                   ),
                   onChanged: (value) {
-                    final newFilters = Map<String, dynamic>.from(filters);
-                    newFilters['minPrice'] =
-                        value.isNotEmpty ? double.tryParse(value) : null;
-                    onChanged(newFilters);
+                    _emitFilterPrice(key: 'minPrice', value: value);
                   },
                 ),
               ),
@@ -79,6 +151,11 @@ class FiltersToolbar extends StatelessWidget {
                 width: 80,
                 height: 36,
                 child: TextField(
+                  controller: _maxController,
+                  focusNode: _maxFocusNode,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly
+                  ],
                   keyboardType: TextInputType.number,
                   style: const TextStyle(
                       color: AppColors.textPrimary, fontSize: 13),
@@ -107,10 +184,7 @@ class FiltersToolbar extends StatelessWidget {
                     ),
                   ),
                   onChanged: (value) {
-                    final newFilters = Map<String, dynamic>.from(filters);
-                    newFilters['maxPrice'] =
-                        value.isNotEmpty ? double.tryParse(value) : null;
-                    onChanged(newFilters);
+                    _emitFilterPrice(key: 'maxPrice', value: value);
                   },
                 ),
               ),
@@ -130,7 +204,7 @@ class FiltersToolbar extends StatelessWidget {
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: filters['sortBy']?.toString() ?? 'score',
+                    value: widget.filters['sortBy']?.toString() ?? 'score',
                     dropdownColor: AppColors.background,
                     style: const TextStyle(
                         color: AppColors.textPrimary,
@@ -150,9 +224,9 @@ class FiltersToolbar extends StatelessWidget {
                     ],
                     onChanged: (value) {
                       final newFilters =
-                          Map<String, dynamic>.from(filters);
+                          Map<String, dynamic>.from(widget.filters);
                       newFilters['sortBy'] = value ?? 'score';
-                      onChanged(newFilters);
+                      widget.onChanged(newFilters);
                     },
                   ),
                 ),
@@ -168,12 +242,12 @@ class FiltersToolbar extends StatelessWidget {
                 width: 66,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: filters['inStock'] == true
+                  color: widget.filters['inStock'] == true
                       ? AppColors.primary
                       : AppColors.surface,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: filters['inStock'] == true
+                    color: widget.filters['inStock'] == true
                         ? AppColors.primary
                         : AppColors.borderColor,
                   ),
@@ -184,12 +258,12 @@ class FiltersToolbar extends StatelessWidget {
                     Transform.scale(
                       scale: 0.75,
                       child: Switch(
-                        value: filters['inStock'] == true,
+                        value: widget.filters['inStock'] == true,
                         onChanged: (value) {
                           final newFilters =
-                              Map<String, dynamic>.from(filters);
+                              Map<String, dynamic>.from(widget.filters);
                           newFilters['inStock'] = value;
-                          onChanged(newFilters);
+                          widget.onChanged(newFilters);
                         },
                         activeTrackColor: Colors.white.withValues(alpha: 0.3),
                         activeThumbColor: Colors.white,

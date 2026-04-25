@@ -106,7 +106,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Comparam automat din 4 magazine pentru tine',
+            'Comparam automat din magazinele Moldovei',
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 14,

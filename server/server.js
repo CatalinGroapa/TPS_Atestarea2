@@ -1334,8 +1334,8 @@ function extractPaymentMethodsFromText(text) {
     const signals = [
         { label: 'Card', patterns: ['card', 'visa', 'mastercard'] },
         { label: 'Cash', patterns: ['ramburs', 'numerar', 'cash'] },
-        { label: 'Rate', patterns: ['rate', 'credit', 'leasing', 'in rate'] },
-        { label: 'Transfer', patterns: ['transfer', 'ordin de plata', 'iban'] }
+        { label: 'Rate', patterns: ['rate', 'credit', 'leasing', 'in rate', '0%'] },
+        { label: 'Transfer', patterns: ['transfer', 'ordin de plata', 'iban', 'virament'] }
     ];
 
     for (const signal of signals) {
@@ -1428,6 +1428,113 @@ async function scrapeBombaProductMeta(browser, productUrl) {
     }
 }
 
+async function scrapeCactusProductMeta(browser, productUrl) {
+    const page = await browser.newPage();
+    try {
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.goto(productUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+        await delay(900);
+
+        const meta = await page.evaluate(() => {
+            const compact = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+            const textFromNode = (node) => compact(node?.innerText || node?.textContent || '');
+            const bySelectorsText = (...selectors) => {
+                for (const selector of selectors) {
+                    const node = document.querySelector(selector);
+                    const text = textFromNode(node);
+                    if (text) return text;
+                }
+                return '';
+            };
+
+            const deliveryOptions = [];
+            const tabLinks = Array.from(document.querySelectorAll('#item4 .catalog__delivery__tabs .nav-link'));
+            tabLinks.forEach((link) => {
+                const titleNode = link.childNodes[0];
+                const area = compact((titleNode?.textContent || '').replace(/\s+/g, ' '));
+                const sub = textFromNode(link.querySelector('.nav-link__sub'));
+                const label = [area, sub].filter(Boolean).join(': ');
+                if (!label) return;
+
+                const priceMatch = label.match(/(\d{2,5})\s*lei/i);
+                deliveryOptions.push({
+                    method: area || 'Livrare',
+                    priceLei: priceMatch ? Number(priceMatch[1]) : null,
+                    label
+                });
+            });
+
+            const smallDelivery = bySelectorsText(
+                '.catalog__item__info-small .ico-delivery + a p',
+                '.catalog__item__info-small .ico-delivery + p'
+            );
+            if (smallDelivery) {
+                deliveryOptions.unshift({
+                    method: 'Chișinău',
+                    priceLei: /gratis/i.test(smallDelivery) ? 0 : null,
+                    label: smallDelivery
+                });
+            }
+
+            const warrantyRaw = bySelectorsText(
+                '.catalog__item__info-small .ico-waranty',
+                '.catalog__item__info-small a[href*="warranty"]'
+            );
+            let warrantySummary = '';
+            if (warrantyRaw) {
+                const numberMatch = warrantyRaw.match(/(\d{1,3})\s*(luni|lunii|de luni|month|months)/i);
+                warrantySummary = numberMatch ? `${numberMatch[1]} luni` : warrantyRaw;
+            }
+
+            const paymentPills = Array.from(
+                document.querySelectorAll('#item5 .catalog__item__payment-type__pill .h5')
+            )
+                .map((node) => textFromNode(node))
+                .filter(Boolean);
+            const paymentText = paymentPills.join(' | ');
+
+            const availabilitySummary = bySelectorsText(
+                '.catalog__item__info-small .ico-delivery + a p',
+                '.catalog__item__info-small .ico-delivery + p'
+            );
+
+            return {
+                deliveryOptions,
+                availabilitySummary,
+                warrantySummary,
+                paymentText
+            };
+        });
+
+        const numericPrices = meta.deliveryOptions
+            .map((item) => Number(item.priceLei))
+            .filter((value) => Number.isFinite(value));
+        const deliveryMinLei = numericPrices.length > 0 ? Math.min(...numericPrices) : null;
+
+        const compactDelivery = [];
+        for (const option of meta.deliveryOptions) {
+            if (!option?.label) continue;
+            if (!compactDelivery.includes(option.label)) {
+                compactDelivery.push(option.label);
+            }
+            if (compactDelivery.length >= 3) break;
+        }
+
+        return {
+            store: 'Cactus',
+            productUrl,
+            deliveryOptions: meta.deliveryOptions,
+            deliverySummary: compactDelivery.join(' | '),
+            deliveryMinLei: Number.isFinite(deliveryMinLei) ? deliveryMinLei : null,
+            availabilitySummary: meta.availabilitySummary || null,
+            warrantySummary: meta.warrantySummary || null,
+            paymentMethods: extractPaymentMethodsFromText(meta.paymentText)
+        };
+    } finally {
+        await page.close();
+    }
+}
+
 async function scrapeProductMeta(store, productUrl) {
     const normalizedStore = normalizeStoreName(store);
     if (!normalizedStore) {
@@ -1446,6 +1553,9 @@ async function scrapeProductMeta(store, productUrl) {
     try {
         if (normalizedStore.includes('bomba')) {
             return await scrapeBombaProductMeta(browser, productUrl);
+        }
+        if (normalizedStore.includes('cactus')) {
+            return await scrapeCactusProductMeta(browser, productUrl);
         }
         throw new Error(`Store "${store}" not supported yet for product meta`);
     } finally {
