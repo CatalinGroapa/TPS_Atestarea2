@@ -23,6 +23,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const bool _quickCompareBetaEnabled = true;
+
   late final NLPEngine _nlpEngine;
   late final RecommendationEngine _recommendationEngine;
   final ApiService _apiService = ApiService();
@@ -42,6 +44,10 @@ class _HomeScreenState extends State<HomeScreen> {
   List<WishlistItem> _wishlist = [];
   Product? _selectedProduct;
   bool _showWishlist = false;
+  bool _showQuickCompare = false;
+  bool _loadingQuickCompareMeta = false;
+  final List<String> _compareProductIds = [];
+  final Map<String, Map<String, dynamic>> _compareProductMetaById = {};
   String? _emptyState = 'welcome';
 
   @override
@@ -116,6 +122,114 @@ class _HomeScreenState extends State<HomeScreen> {
     return _wishlist.any((item) => item.id == productId);
   }
 
+  Product? _findProductById(String productId) {
+    for (final product in _scoredResults) {
+      if (product.id == productId) {
+        return product;
+      }
+    }
+    for (final product in _products) {
+      if (product.id == productId) {
+        return product;
+      }
+    }
+    return null;
+  }
+
+  List<Product> _getComparedProducts() {
+    final compared = <Product>[];
+    for (final productId in _compareProductIds) {
+      final product = _findProductById(productId);
+      if (product != null) {
+        compared.add(product);
+      }
+    }
+    return compared;
+  }
+
+  void _pruneCompareSelection(Iterable<Product> availableProducts) {
+    if (!_quickCompareBetaEnabled || _compareProductIds.isEmpty) return;
+
+    final validIds = availableProducts.map((p) => p.id).toSet();
+    _compareProductIds.removeWhere((id) => !validIds.contains(id));
+    _compareProductMetaById.removeWhere((key, _) => !validIds.contains(key));
+    if (_compareProductIds.length < 2) {
+      _showQuickCompare = false;
+      _loadingQuickCompareMeta = false;
+    }
+  }
+
+  void _toggleCompare(Product product) {
+    if (!_quickCompareBetaEnabled) return;
+
+    if (_compareProductIds.contains(product.id)) {
+      setState(() {
+        _compareProductIds.remove(product.id);
+        _compareProductMetaById.remove(product.id);
+        if (_compareProductIds.length < 2) {
+          _showQuickCompare = false;
+          _loadingQuickCompareMeta = false;
+        }
+      });
+      return;
+    }
+
+    if (_compareProductIds.length >= 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Poti compara maxim 2 produse odata'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _compareProductIds.add(product.id);
+    });
+  }
+
+  void _clearCompareSelection() {
+    if (!_quickCompareBetaEnabled) return;
+    setState(() {
+      _compareProductIds.clear();
+      _showQuickCompare = false;
+      _loadingQuickCompareMeta = false;
+      _compareProductMetaById.clear();
+    });
+  }
+
+  Future<void> _openQuickCompare() async {
+    final compared = _getComparedProducts();
+    if (compared.length != 2) return;
+
+    setState(() {
+      _showQuickCompare = true;
+      _loadingQuickCompareMeta = true;
+    });
+
+    final result = <String, Map<String, dynamic>>{};
+    for (final product in compared) {
+      final url = product.productUrl.isNotEmpty
+          ? product.productUrl
+          : product.storeUrl;
+      final meta = await _apiService.fetchProductMeta(
+        store: product.store,
+        productUrl: url,
+      );
+      if (meta != null) {
+        result[product.id] = meta;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _compareProductMetaById
+        ..clear()
+        ..addAll(result);
+      _loadingQuickCompareMeta = false;
+    });
+  }
+
   void _applyFiltersAndDisplay(
       List<Product> prods, String q, Map<String, dynamic> filt) {
     final parsedFilters = <String, dynamic>{
@@ -135,6 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _scoredResults = recommendations;
+      _pruneCompareSelection(recommendations);
       _loading = false;
       if (recommendations.isEmpty) {
         _emptyState = 'noResults';
@@ -249,6 +364,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _loading = true;
       _emptyState = null;
       _scoredResults = [];
+      _showQuickCompare = false;
+      _compareProductIds.clear();
+      _compareProductMetaById.clear();
+      _loadingQuickCompareMeta = false;
     });
 
     try {
@@ -283,6 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         _products = normalizedProducts;
+        _pruneCompareSelection(normalizedProducts);
       });
 
       await Future.delayed(const Duration(milliseconds: 800));
@@ -356,6 +476,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final resultsCountText = _scoredResults.isNotEmpty
         ? '${_scoredResults.length} produse gasite in ${_scoredResults.map((p) => p.store).toSet().length} magazine'
         : '';
+    final comparedProducts = _getComparedProducts();
+    final showCompareBar = _quickCompareBetaEnabled &&
+        !_loading &&
+        comparedProducts.isNotEmpty &&
+        _selectedProduct == null &&
+        !_showWishlist &&
+        !_showQuickCompare;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -569,12 +696,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           product: product,
                           rank: index + 1,
                           isWishlisted: _isInWishlist(product.id),
+                          isCompared: _compareProductIds.contains(product.id),
+                          compareEnabled: _quickCompareBetaEnabled,
                           reasons: reasons,
                           formatPrice: formatPrice,
                           onDetailsClick: () {
                             setState(() => _selectedProduct = product);
                           },
                           onWishlistToggle: () => _toggleWishlist(product),
+                          onCompareToggle: () => _toggleCompare(product),
                         );
                       },
                       childCount: _scoredResults.length,
@@ -607,6 +737,99 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
 
+          if (showCompareBar)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16 + MediaQuery.of(context).padding.bottom,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Comparare rapida (beta): ${comparedProducts.length}/2',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: _clearCompareSelection,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'Goleste',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: comparedProducts.length == 2
+                          ? _openQuickCompare
+                          : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: comparedProducts.length == 2
+                              ? AppColors.primary
+                              : AppColors.surface,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Compara',
+                          style: TextStyle(
+                            color: comparedProducts.length == 2
+                                ? Colors.white
+                                : AppColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          if (_showQuickCompare && comparedProducts.length == 2)
+            _QuickCompareModal(
+              products: comparedProducts,
+              productMetaById: _compareProductMetaById,
+              loadingMeta: _loadingQuickCompareMeta,
+              formatPrice: formatPrice,
+              onClose: () => setState(() => _showQuickCompare = false),
+              onOpenProduct: (product) {
+                setState(() {
+                  _showQuickCompare = false;
+                  _selectedProduct = product;
+                });
+              },
+            ),
+
           // Product modal
           if (_selectedProduct != null)
             ProductModal(
@@ -633,6 +856,495 @@ class _HomeScreenState extends State<HomeScreen> {
               onItemTap: _handleWishlistItemTap,
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuickCompareProductMeta {
+  final String deliveryLabel;
+  final int? deliveryDays;
+  final String warrantyLabel;
+  final int? warrantyMonths;
+  final List<String> paymentMethods;
+
+  const _QuickCompareProductMeta({
+    required this.deliveryLabel,
+    required this.deliveryDays,
+    required this.warrantyLabel,
+    required this.warrantyMonths,
+    required this.paymentMethods,
+  });
+}
+
+class _QuickCompareModal extends StatelessWidget {
+  final List<Product> products;
+  final Map<String, Map<String, dynamic>> productMetaById;
+  final bool loadingMeta;
+  final String Function(double) formatPrice;
+  final void Function(Product) onOpenProduct;
+  final VoidCallback onClose;
+
+  const _QuickCompareModal({
+    required this.products,
+    required this.productMetaById,
+    required this.loadingMeta,
+    required this.formatPrice,
+    required this.onOpenProduct,
+    required this.onClose,
+  });
+
+  String _allText(Product product) {
+    return [
+      product.title,
+      product.description,
+      ...product.specs,
+    ].join(' ').toLowerCase();
+  }
+
+  _QuickCompareProductMeta _extractMeta(
+      Product product, Map<String, dynamic>? productMeta) {
+    final text = _allText(product);
+
+    int? deliveryDays;
+    String deliveryLabel = 'Nedisponibil';
+    final dayRangeRegex = RegExp(
+        r'(\d{1,2})\s*[-–]\s*(\d{1,2})\s*(zile|zi|days|day|дн)',
+        caseSensitive: false);
+    final daySingleRegex =
+        RegExp(r'(\d{1,2})\s*(zile|zi|days|day|дн)', caseSensitive: false);
+    final nextDayRegex = RegExp(r'(livrare rapida|24h|same day|next day)',
+        caseSensitive: false);
+
+    final rangeMatch = dayRangeRegex.firstMatch(text);
+    if (rangeMatch != null) {
+      final minDays = int.tryParse(rangeMatch.group(1) ?? '');
+      final maxDays = int.tryParse(rangeMatch.group(2) ?? '');
+      if (minDays != null && maxDays != null) {
+        deliveryDays = minDays;
+        deliveryLabel = '$minDays-$maxDays zile';
+      }
+    } else {
+      final singleMatch = daySingleRegex.firstMatch(text);
+      if (singleMatch != null) {
+        final days = int.tryParse(singleMatch.group(1) ?? '');
+        if (days != null) {
+          deliveryDays = days;
+          deliveryLabel = '$days zile';
+        }
+      } else if (nextDayRegex.hasMatch(text)) {
+        deliveryDays = 1;
+        deliveryLabel = '1 zi';
+      }
+    }
+
+    int? warrantyMonths;
+    String warrantyLabel = 'Nedisponibila';
+    final monthRegex = RegExp(
+        r'(\d{1,3})\s*(luni|luna|month|months|месяц|месяца|месяцев)',
+        caseSensitive: false);
+    final yearRegex = RegExp(r'(\d{1,2})\s*(ani|an|year|years|год|года|лет)',
+        caseSensitive: false);
+    final warrantyRegex = RegExp(r'(garantie|warranty|гарант)',
+        caseSensitive: false);
+
+    if (warrantyRegex.hasMatch(text)) {
+      final monthMatch = monthRegex.firstMatch(text);
+      if (monthMatch != null) {
+        final months = int.tryParse(monthMatch.group(1) ?? '');
+        if (months != null) {
+          warrantyMonths = months;
+          warrantyLabel = '$months luni';
+        }
+      } else {
+        final yearMatch = yearRegex.firstMatch(text);
+        if (yearMatch != null) {
+          final years = int.tryParse(yearMatch.group(1) ?? '');
+          if (years != null) {
+            warrantyMonths = years * 12;
+            warrantyLabel = '$years ani';
+          }
+        } else {
+          warrantyLabel = 'Da (durata n/a)';
+        }
+      }
+    }
+
+    final paymentMethods = <String>[];
+    final paymentSignals = <String, List<String>>{
+      'Card': ['card', 'visa', 'mastercard'],
+      'Cash': ['cash', 'numerar', 'ramburs'],
+      'Rate': ['rate', 'credit', 'leasing', 'installment'],
+      'Transfer': ['transfer', 'iban', 'ordin de plata'],
+    };
+
+    for (final entry in paymentSignals.entries) {
+      if (entry.value.any((signal) => text.contains(signal))) {
+        paymentMethods.add(entry.key);
+      }
+    }
+
+    final backendDeliverySummary =
+        productMeta?['deliverySummary']?.toString().trim() ?? '';
+    if (backendDeliverySummary.isNotEmpty) {
+      deliveryLabel = backendDeliverySummary;
+    }
+    final backendDeliveryMinLei =
+        int.tryParse('${productMeta?['deliveryMinLei'] ?? ''}');
+    if (backendDeliveryMinLei != null && backendDeliveryMinLei > 0) {
+      deliveryDays ??= 1;
+    }
+
+    final backendWarranty = productMeta?['warrantySummary']?.toString().trim() ?? '';
+    if (backendWarranty.isNotEmpty) {
+      warrantyLabel = backendWarranty;
+      final monthMatch = monthRegex.firstMatch(backendWarranty);
+      if (monthMatch != null) {
+        warrantyMonths = int.tryParse(monthMatch.group(1) ?? '') ?? warrantyMonths;
+      }
+    }
+
+    final backendPayments = (productMeta?['paymentMethods'] is List)
+        ? (productMeta?['paymentMethods'] as List)
+            .map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .toList()
+        : const <String>[];
+    if (backendPayments.isNotEmpty) {
+      paymentMethods
+        ..clear()
+        ..addAll(backendPayments);
+    }
+
+    return _QuickCompareProductMeta(
+      deliveryLabel: deliveryLabel,
+      deliveryDays: deliveryDays,
+      warrantyLabel: warrantyLabel,
+      warrantyMonths: warrantyMonths,
+      paymentMethods: paymentMethods,
+    );
+  }
+
+  Color _bestCellColor(bool best) {
+    if (!best) return AppColors.surface;
+    return const Color(0xFFE8F8EF);
+  }
+
+  Widget _buildTableRow({
+    required String label,
+    required String leftValue,
+    required String rightValue,
+    bool leftBest = false,
+    bool rightBest = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 92,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              decoration: BoxDecoration(
+                color: _bestCellColor(leftBest),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.borderColor),
+              ),
+              child: Text(
+                leftValue,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: leftBest ? FontWeight.w700 : FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              decoration: BoxDecoration(
+                color: _bestCellColor(rightBest),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.borderColor),
+              ),
+              child: Text(
+                rightValue,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: rightBest ? FontWeight.w700 : FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderCard(Product product) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              product.store.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              product.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final left = products[0];
+    final right = products[1];
+    final leftMeta = _extractMeta(left, productMetaById[left.id]);
+    final rightMeta = _extractMeta(right, productMetaById[right.id]);
+
+    final leftIsCheaper = left.price < right.price;
+    final rightIsCheaper = right.price < left.price;
+    final leftInStockBest = left.inStock && !right.inStock;
+    final rightInStockBest = right.inStock && !left.inStock;
+
+    final leftDeliveryBest = leftMeta.deliveryDays != null &&
+        (rightMeta.deliveryDays == null ||
+            leftMeta.deliveryDays! < rightMeta.deliveryDays!);
+    final rightDeliveryBest = rightMeta.deliveryDays != null &&
+        (leftMeta.deliveryDays == null ||
+            rightMeta.deliveryDays! < leftMeta.deliveryDays!);
+
+    final leftWarrantyBest = leftMeta.warrantyMonths != null &&
+        (rightMeta.warrantyMonths == null ||
+            leftMeta.warrantyMonths! > rightMeta.warrantyMonths!);
+    final rightWarrantyBest = rightMeta.warrantyMonths != null &&
+        (leftMeta.warrantyMonths == null ||
+            rightMeta.warrantyMonths! > leftMeta.warrantyMonths!);
+
+    final leftPayments = leftMeta.paymentMethods.isEmpty
+        ? 'Nedisponibil'
+        : leftMeta.paymentMethods.join(', ');
+    final rightPayments = rightMeta.paymentMethods.isEmpty
+        ? 'Nedisponibil'
+        : rightMeta.paymentMethods.join(', ');
+
+    final leftPaymentBest = leftMeta.paymentMethods.length > rightMeta.paymentMethods.length;
+    final rightPaymentBest = rightMeta.paymentMethods.length > leftMeta.paymentMethods.length;
+
+    return Material(
+      color: Colors.black.withValues(alpha: 0.45),
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            child: SingleChildScrollView(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Comparare rapida (beta)',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: onClose,
+                          child: const Icon(
+                            Icons.close,
+                            color: AppColors.textSecondary,
+                            size: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (loadingMeta)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.8,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Se incarca detalii magazin...',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeaderCard(left),
+                        const SizedBox(width: 8),
+                        _buildHeaderCard(right),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTableRow(
+                      label: 'Pret',
+                      leftValue: formatPrice(left.price),
+                      rightValue: formatPrice(right.price),
+                      leftBest: leftIsCheaper,
+                      rightBest: rightIsCheaper,
+                    ),
+                    _buildTableRow(
+                      label: 'Magazin',
+                      leftValue: left.store,
+                      rightValue: right.store,
+                    ),
+                    _buildTableRow(
+                      label: 'Disponibil',
+                      leftValue: left.inStock ? 'In stoc' : 'Indisponibil',
+                      rightValue: right.inStock ? 'In stoc' : 'Indisponibil',
+                      leftBest: leftInStockBest,
+                      rightBest: rightInStockBest,
+                    ),
+                    _buildTableRow(
+                      label: 'Livrare',
+                      leftValue: leftMeta.deliveryLabel,
+                      rightValue: rightMeta.deliveryLabel,
+                      leftBest: leftDeliveryBest,
+                      rightBest: rightDeliveryBest,
+                    ),
+                    _buildTableRow(
+                      label: 'Garantie',
+                      leftValue: leftMeta.warrantyLabel,
+                      rightValue: rightMeta.warrantyLabel,
+                      leftBest: leftWarrantyBest,
+                      rightBest: rightWarrantyBest,
+                    ),
+                    _buildTableRow(
+                      label: 'Plata',
+                      leftValue: leftPayments,
+                      rightValue: rightPayments,
+                      leftBest: leftPaymentBest,
+                      rightBest: rightPaymentBest,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => onOpenProduct(left),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Detalii produs',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => onOpenProduct(right),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Detalii produs',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

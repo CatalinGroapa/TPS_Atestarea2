@@ -1321,6 +1321,138 @@ async function scrapeAcrossStores(browser, normalizedQuery) {
     return allProducts;
 }
 
+function normalizeStoreName(value) {
+    return normalizeText(String(value || ''))
+        .replace(/\.md$/i, '')
+        .trim();
+}
+
+function extractPaymentMethodsFromText(text) {
+    const normalized = normalizeText(text);
+    const matches = [];
+
+    const signals = [
+        { label: 'Card', patterns: ['card', 'visa', 'mastercard'] },
+        { label: 'Cash', patterns: ['ramburs', 'numerar', 'cash'] },
+        { label: 'Rate', patterns: ['rate', 'credit', 'leasing', 'in rate'] },
+        { label: 'Transfer', patterns: ['transfer', 'ordin de plata', 'iban'] }
+    ];
+
+    for (const signal of signals) {
+        if (signal.patterns.some((pattern) => normalized.includes(normalizeText(pattern)))) {
+            matches.push(signal.label);
+        }
+    }
+
+    return Array.from(new Set(matches));
+}
+
+async function scrapeBombaProductMeta(browser, productUrl) {
+    const page = await browser.newPage();
+    try {
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.goto(productUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+        await delay(900);
+
+        const meta = await page.evaluate(() => {
+            const compact = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+            const textFromNode = (node) => compact(node?.innerText || node?.textContent || '');
+
+            const deliveryOptions = [];
+            const deliverySection = document.querySelector('.delivery-section');
+            if (deliverySection) {
+                const wrappers = Array.from(deliverySection.querySelectorAll('li .item-wrapper'));
+                wrappers.forEach((wrapper) => {
+                    const paragraphs = Array.from(wrapper.querySelectorAll('p')).map((p) => textFromNode(p)).filter(Boolean);
+                    if (paragraphs.length === 0) return;
+
+                    const locationText = paragraphs[0];
+                    const priceText = paragraphs.find((line) => /\d+\s*lei/i.test(line)) || '';
+                    const match = priceText.match(/(\d{2,5})\s*lei/i);
+                    if (!match) return;
+
+                    deliveryOptions.push({
+                        method: locationText,
+                        priceLei: Number(match[1]),
+                        label: `${locationText} ${match[1]} lei`
+                    });
+                });
+            }
+
+            const pickupSummary = textFromNode(
+                deliverySection?.querySelector('.count_shops_availability')?.closest('span,div,li')
+            );
+            const pickupMeta = textFromNode(deliverySection?.querySelector('.meta'));
+            const availabilitySummary = [pickupSummary, pickupMeta].filter(Boolean).join(' | ');
+
+            let warrantyValue = '';
+            const specRows = Array.from(document.querySelectorAll('tr.attribute-item'));
+            const warrantyRow = specRows.find((row) => {
+                const label = textFromNode(row.querySelector('.attribute-name'));
+                return /garantie|garanție|warranty|гарант/i.test(label);
+            });
+            if (warrantyRow) {
+                const rawValue = textFromNode(warrantyRow.querySelector('.attribute-value'));
+                const numericMatch = rawValue.match(/(\d{1,3})/);
+                warrantyValue = numericMatch ? `${numericMatch[1]} luni` : rawValue;
+            }
+
+            const descriptionMeta = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+            const bodyText = compact(document.body.innerText || '');
+            const paymentText = `${descriptionMeta} ${bodyText}`;
+
+            return {
+                deliveryOptions,
+                availabilitySummary,
+                warrantySummary: warrantyValue,
+                paymentText
+            };
+        });
+
+        const deliveryMinLei = meta.deliveryOptions.length > 0
+            ? Math.min(...meta.deliveryOptions.map((item) => Number(item.priceLei)).filter(Number.isFinite))
+            : null;
+
+        return {
+            store: 'Bomba',
+            productUrl,
+            deliveryOptions: meta.deliveryOptions,
+            deliverySummary: meta.deliveryOptions.map((item) => item.label).slice(0, 4).join(' | '),
+            deliveryMinLei: Number.isFinite(deliveryMinLei) ? deliveryMinLei : null,
+            availabilitySummary: meta.availabilitySummary || null,
+            warrantySummary: meta.warrantySummary || null,
+            paymentMethods: extractPaymentMethodsFromText(meta.paymentText)
+        };
+    } finally {
+        await page.close();
+    }
+}
+
+async function scrapeProductMeta(store, productUrl) {
+    const normalizedStore = normalizeStoreName(store);
+    if (!normalizedStore) {
+        throw new Error('Store is required');
+    }
+
+    if (!productUrl) {
+        throw new Error('Product URL is required');
+    }
+
+    if (!/^https?:\/\//i.test(productUrl)) {
+        throw new Error('Product URL must start with http/https');
+    }
+
+    const browser = await launchBrowser();
+    try {
+        if (normalizedStore.includes('bomba')) {
+            return await scrapeBombaProductMeta(browser, productUrl);
+        }
+        throw new Error(`Store "${store}" not supported yet for product meta`);
+    } finally {
+        await browser.close();
+    }
+}
+
 async function launchBrowser() {
     console.log('Lansez Puppeteer browser...');
     const possibleChromePaths = [
@@ -1568,12 +1700,47 @@ app.get('/image-proxy', async (req, res) => {
     }
 });
 
+app.get('/product-meta', async (req, res) => {
+    const store = String(req.query.store || '').trim();
+    const productUrl = String(req.query.url || '').trim();
+
+    if (!store) {
+        return res.status(400).json({ error: 'Query parameter "store" is required' });
+    }
+    if (!productUrl) {
+        return res.status(400).json({ error: 'Query parameter "url" is required' });
+    }
+
+    const cacheKey = `product_meta_${normalizeStoreName(store)}_${productUrl}`;
+    const cachedMeta = cache.get(cacheKey);
+    if (cachedMeta) {
+        return res.json(cachedMeta);
+    }
+
+    try {
+        const meta = await scrapeProductMeta(store, productUrl);
+        cache.set(cacheKey, meta, 60 * 60);
+        res.json(meta);
+    } catch (error) {
+        console.error('Product meta error:', error.message);
+        res.status(500).json({
+            error: 'Failed to extract product metadata',
+            message: error.message
+        });
+    }
+});
+
 // Health check endpoint
 app.get('/', (req, res) => {
     res.json({
         status: 'ok',
         service: 'PulsePrice API',
-        endpoints: ['/health', '/search?q=iphone', '/search?q=iphone&ai=1']
+        endpoints: [
+            '/health',
+            '/search?q=iphone',
+            '/search?q=iphone&ai=1',
+            '/product-meta?store=Bomba&url=https://bomba.md/ro/product/...'
+        ]
     });
 });
 

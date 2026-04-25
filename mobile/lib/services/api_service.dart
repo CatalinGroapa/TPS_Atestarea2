@@ -114,4 +114,27 @@ class ApiService {
       'inStock': product.inStock,
     };
   }
+
+  Future<Map<String, dynamic>?> fetchProductMeta({
+    required String store,
+    required String productUrl,
+  }) async {
+    final safeStore = store.trim();
+    final safeUrl = productUrl.trim();
+    if (safeStore.isEmpty || safeUrl.isEmpty) return null;
+
+    try {
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/product-meta?store=${Uri.encodeComponent(safeStore)}&url=${Uri.encodeComponent(safeUrl)}');
+      final response = await http.get(uri).timeout(const Duration(seconds: 35));
+      if (response.statusCode != 200) return null;
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+
+    return null;
+  }
 }

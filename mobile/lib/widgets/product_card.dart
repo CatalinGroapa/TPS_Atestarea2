@@ -7,20 +7,26 @@ class ProductCard extends StatefulWidget {
   final Product product;
   final int rank;
   final bool isWishlisted;
+  final bool isCompared;
+  final bool compareEnabled;
   final List<String> reasons;
   final String Function(double) formatPrice;
   final VoidCallback onDetailsClick;
   final VoidCallback onWishlistToggle;
+  final VoidCallback? onCompareToggle;
 
   const ProductCard({
     super.key,
     required this.product,
     required this.rank,
     required this.isWishlisted,
+    this.isCompared = false,
+    this.compareEnabled = false,
     required this.reasons,
     required this.formatPrice,
     required this.onDetailsClick,
     required this.onWishlistToggle,
+    this.onCompareToggle,
   });
 
   @override
@@ -172,18 +178,57 @@ class _ProductCardState extends State<ProductCard> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    // Stock status
+                    // Stock + compare quick action
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        widget.product.inStock ? 'In stoc' : 'Indisponibil',
-                        style: TextStyle(
-                          color: widget.product.inStock
-                              ? AppColors.textSecondary
-                              : AppColors.textMuted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              widget.product.inStock ? 'In stoc' : 'Indisponibil',
+                              style: TextStyle(
+                                color: widget.product.inStock
+                                    ? AppColors.textSecondary
+                                    : AppColors.textMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (widget.compareEnabled &&
+                              widget.onCompareToggle != null) ...[
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: widget.onCompareToggle,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: widget.isCompared
+                                      ? AppColors.primary
+                                      : AppColors.surface,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: widget.isCompared
+                                        ? AppColors.primary
+                                        : AppColors.borderColor,
+                                  ),
+                                ),
+                                child: Text(
+                                  widget.isCompared ? 'Comparat' : 'Compara',
+                                  style: TextStyle(
+                                    color: widget.isCompared
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const Spacer(),
